@@ -13,6 +13,7 @@ from .relay.clipboard import WindowsClipboard
 from .relay.pipeline import ExactRelayPipeline
 from .relay.schema import format_result_block, parse_task_block, RelayValidationError
 from .relay.watcher import ClipboardRelayWatcher
+from .search_service import find_files
 
 
 def _load(path: str):
@@ -164,6 +165,20 @@ def cmd_relay_watch(args) -> int:
         return 130
 
 
+def cmd_find_files(args) -> int:
+    cfg = _load(args.config)
+    roots = cfg.get("file_search", {}).get("roots") or [cfg["repository"]["root"]]
+    try:
+        results = find_files(roots, args.query, max_results=args.max_results)
+    except Exception as exc:
+        print(f"FILE_SEARCH_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 11
+    for item in results:
+        print(f"{item.kind}\t{item.path}" + (f"\t{item.size}" if item.size is not None else ""))
+    print(f"MATCHES={len(results)}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="upab",
@@ -206,6 +221,12 @@ def build_parser() -> argparse.ArgumentParser:
     watch.add_argument("--config", required=True)
     watch.add_argument("--once", action="store_true")
     watch.set_defaults(func=cmd_relay_watch)
+
+    find_cmd = sub.add_parser("find-files", help="Search configured filesystem roots by filename")
+    find_cmd.add_argument("--config", required=True)
+    find_cmd.add_argument("--query", required=True)
+    find_cmd.add_argument("--max-results", type=int, default=200)
+    find_cmd.set_defaults(func=cmd_find_files)
 
     return parser
 
