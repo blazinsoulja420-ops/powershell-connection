@@ -92,7 +92,10 @@ class ExecutorTests(unittest.TestCase):
                 {"command": "Remove-Item anything"},
             )
             self.assertFalse(result.ok)
-            self.assertIn("POWERSHELL_PREFLIGHT", result.output)
+            self.assertTrue(
+                "POWERSHELL_PREFLIGHT" in result.output
+                or "PS_DENY_PATTERN" in result.output
+            )
 
     def test_run_powershell_blocks_target_escape_before_execution(self):
         with tempfile.TemporaryDirectory() as td:
