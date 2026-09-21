@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "portfolio_id": "BLAZINSOULJA420-OPS-PORTFOLIO",
+  "status": "ACTIVE_COORDINATION_PLAN",
+  "repositories": [
+    {"name":"Universal-AI-Behavior-Requirements-Registry","role":"UNIVERSAL_BEHAVIOR_SPECIFICATION"},
+    {"name":"UP-RES-001-Autonomous-Research-System","role":"SHARED_RESEARCH_CAPABILITY"},
+    {"name":"powershell-connection","role":"LOCAL_RELAY_AND_CONVERSATION_STEWARD"},
+    {"name":"UP-UHAIB-001-Poindexter","role":"AI_SYSTEM_PROJECT"},
+    {"name":"RAID-AI","role":"PRODUCT_PROJECT"},
+    {"name":"UP-MALSMORPG-001","role":"PRODUCT_PROJECT"},
+    {"name":"Tattoo-Webiste","role":"PRODUCT_PROJECT"},
+    {"name":"online-store","role":"PRODUCT_PROJECT"},
+    {"name":"moto_bot_prompts","role":"PROMPT_AND_AUTOMOTIVE_ASSET_PROJECT"}
+  ],
+  "coordination_rules": [
+    "Each repository remains authoritative for its own implementation state.",
+    "Universal AI Behavior may define reusable behavior but does not silently mutate consuming projects.",
+    "UARS returns research evidence and implementation knowledge but does not grant project authority.",
+    "powershell-connection may relay local work and analyze conversation data only through authorized supported sources.",
+    "Before cross-repository changes, resolve repository, branch, file, version, and authority.",
+    "Do not duplicate shared capabilities when an approved shared subsystem already exists."
+  ],
+  "chat_stewardship": {
+    "enabled": true,
+    "mode": "RECOMMENDATION_AND_PLAN_ONLY",
+    "features": [
+      "next_best_reply_suggestion",
+      "project_classification",
+      "duplicate_chat_detection",
+      "unique_knowledge_preservation",
+      "merge_plan",
+      "folder_placement_plan",
+      "canonical_chat_title_recommendation"
+    ],
+    "auto_send_replies": false,
+    "auto_move_or_delete_chats": false
+  }
+}
