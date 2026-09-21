@@ -80,6 +80,37 @@ class ExecutorTests(unittest.TestCase):
             self.assertTrue(good.ok, good.output)
             self.assertEqual(p.read_text(), "new")
 
+    def test_run_powershell_blocks_unallowlisted_command(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            result = ex.execute(
+                "run_powershell",
+                {"command": "Remove-Item anything"},
+            )
+            self.assertFalse(result.ok)
+            self.assertIn("POWERSHELL_PREFLIGHT", result.output)
+
+    def test_run_powershell_blocks_target_escape_before_execution(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            result = ex.execute(
+                "run_powershell",
+                {
+                    "command": "Get-Content x.txt",
+                    "target_paths": ["../outside.txt"],
+                },
+            )
+            self.assertFalse(result.ok)
+            self.assertIn("target escapes repository root", result.output)
+
     def test_read_file(self):
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
