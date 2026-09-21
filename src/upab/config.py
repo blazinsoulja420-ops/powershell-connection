@@ -64,6 +64,12 @@ def load_config(path: str | Path) -> dict[str, Any]:
     _require(state, "directory", "state")
     state["directory"] = str(Path(state["directory"]).expanduser().resolve())
 
+    file_search = cfg.setdefault("file_search", {})
+    file_search.setdefault("roots", [repo["root"]])
+    if not isinstance(file_search["roots"], list) or not all(isinstance(x, str) and x.strip() for x in file_search["roots"]):
+        raise ConfigError("file_search.roots must be an array of non-empty strings")
+    file_search["roots"] = [str(Path(x).expanduser().resolve()) for x in file_search["roots"]]
+
     relay = cfg.setdefault("exact_relay", {})
     relay.setdefault("enabled", False)
     relay.setdefault("channel_id", "upab-local")
