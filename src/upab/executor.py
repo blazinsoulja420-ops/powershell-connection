@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .command_preflight import preflight_powershell
 from .evidence import EvidenceLog
 from .gitguard import GitGuard, GitGuardError
 from .governance import GovernanceGate, sha256_file
@@ -179,12 +180,51 @@ class ToolExecutor:
     def _run_powershell(self, args: dict[str, Any]) -> ToolResult:
         command = str(args["command"])
         exe = str(self.gov.get("powershell_executable", "powershell.exe"))
+        allowed_prefixes = tuple(
+            str(item)
+            for item in self.gov.get("powershell_allow_prefixes", [])
+        )
+        raw_targets = args.get("target_paths") or ()
+        if not isinstance(raw_targets, (list, tuple)) or not all(
+            isinstance(item, str)
+            for item in raw_targets
+        ):
+            return ToolResult(
+                False,
+                "PowerShell target_paths must be an array of strings",
+                fatal=True,
+            )
+
+        preflight = preflight_powershell(
+            command,
+            repository_root=self.repo_root,
+            target_paths=tuple(raw_targets),
+            executable=exe,
+            allowed_prefixes=allowed_prefixes,
+        )
+        if not preflight.ok:
+            return ToolResult(
+                False,
+                "BLOCKED [POWERSHELL_PREFLIGHT]: " + "; ".join(preflight.reasons),
+                {
+                    "target_paths": list(preflight.target_paths),
+                },
+                fatal=True,
+            )
+
         cp = self._process(
             [exe, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
             int(self.gov["max_command_seconds"]),
         )
         output = (cp.stdout or "") + (("\nSTDERR:\n" + cp.stderr) if cp.stderr else "")
-        return ToolResult(cp.returncode == 0, redact(output, int(self.gov["max_output_chars"])), {"returncode": cp.returncode})
+        return ToolResult(
+            cp.returncode == 0,
+            redact(output, int(self.gov["max_output_chars"])),
+            {
+                "returncode": cp.returncode,
+                "target_paths": list(preflight.target_paths),
+            },
+        )
 
     def _run_tests(self, args: dict[str, Any]) -> ToolResult:
         base = self.gov.get("test_command")
