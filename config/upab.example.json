@@ -1,0 +1,72 @@
+{
+  "provider": {
+    "kind": "lmstudio",
+    "base_url": "http://127.0.0.1:1234/v1",
+    "model": "CHANGE_ME_TO_LM_STUDIO_MODEL_ID",
+    "api_token_env": null,
+    "timeout_seconds": 180,
+    "temperature": 0.1,
+    "max_tokens": 4096
+  },
+  "repository": {
+    "root": "C:\\Path\\To\\Your\\Repository",
+    "expected_head": null
+  },
+  "governance": {
+    "upe_version": "1.0.1",
+    "upgs_version": "3.1.1",
+    "inheritance": "STRICT_AUTOMATIC_NON_WEAKENING",
+    "canonical_package_sha256": "B73996A3D1EC43DF679AAF1CAD4170A5F8FBDD9E9112C53A1C4F2032ABDE8A3D",
+    "canonical_package_path": null,
+    "require_canonical_for_mutation": true,
+    "read_only": true,
+    "authorized_write_paths": [],
+    "require_expected_hash_for_overwrite": true,
+    "allow_test_execution": true,
+    "test_command": [
+      "python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ],
+    "powershell_executable": "powershell.exe",
+    "powershell_allow_prefixes": [
+      "Get-ChildItem",
+      "Get-Content",
+      "Get-Item",
+      "Get-FileHash",
+      "Test-Path",
+      "Resolve-Path",
+      "Select-String",
+      "git status",
+      "git diff",
+      "git show",
+      "git grep",
+      "git rev-parse",
+      "git ls-files",
+      "git log",
+      "python --version"
+    ],
+    "max_command_seconds": 180,
+    "max_output_chars": 40000,
+    "max_file_read_bytes": 250000,
+    "max_list_entries": 2000,
+    "max_agent_steps": 30
+  },
+  "state": {
+    "directory": "~/.upab"
+  },
+  "exact_relay": {
+    "enabled": false,
+    "channel_id": "upab-local",
+    "poll_interval_ms": 500,
+    "max_task_lifetime_seconds": 900,
+    "max_operations": 50,
+    "auto_copy_result": true,
+    "rollback_on_failure": true,
+    "require_task_expected_head_for_mutation": true
+  }
+}

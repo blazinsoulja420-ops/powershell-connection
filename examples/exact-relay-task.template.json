@@ -1,0 +1,25 @@
+{
+  "schema": "upab.exact-relay.task.v1",
+  "task_id": "REPLACE-WITH-UNIQUE-ID",
+  "channel_id": "upab-poindexter-local",
+  "relay_nonce": "PASTE-CURRENT-NONCE",
+  "issued_at_utc": "2026-09-16T21:30:00Z",
+  "expires_at_utc": "2026-09-16T21:40:00Z",
+  "repository": {
+    "root": "C:\\Users\\chaot\\OneDrive\\Desktop\\UP-UHAIB-001\\repo",
+    "expected_head": null
+  },
+  "mode": "read_only",
+  "stop_on_failure": true,
+  "rollback_on_failure": true,
+  "operations": [
+    {
+      "operation_id": "status",
+      "op": "git_status",
+      "args": {}
+    }
+  ],
+  "result": {
+    "copy_to_clipboard": true
+  }
+}
