@@ -39,6 +39,11 @@ def command_matches_allow_prefix(
     return token in normalized
 
 
+def contains_command_chaining(command: str) -> bool:
+    """Reject shell chaining so an allowlisted first token cannot hide later commands."""
+    return bool(re.search(r"[;|&]|\r|\n", command))
+
+
 def preflight_powershell(
     command: str,
     *,
@@ -56,6 +61,8 @@ def preflight_powershell(
         reasons.append("no PowerShell command allowlist configured")
     elif not command_matches_allow_prefix(command, allowed_prefixes):
         reasons.append("PowerShell command is not allowlisted")
+    if contains_command_chaining(command):
+        reasons.append("PowerShell command chaining is not allowed")
 
     resolved_targets: list[str] = []
     repo = repository_root.resolve()
