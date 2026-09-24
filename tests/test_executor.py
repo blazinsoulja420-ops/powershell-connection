@@ -114,6 +114,21 @@ class ExecutorTests(unittest.TestCase):
             self.assertFalse(result.ok)
             self.assertIn("target escapes repository root", result.output)
 
+    def test_run_powershell_blocks_chained_command_after_allowlisted_prefix(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            ex.gov["powershell_allow_prefixes"] = ["Get-Content"]
+            result = ex.execute(
+                "run_powershell",
+                {"command": "Get-Content x.txt; Remove-Item x.txt"},
+            )
+            self.assertFalse(result.ok)
+            self.assertIn("command chaining is not allowed", result.output)
+
     def test_read_file(self):
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
