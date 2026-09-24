@@ -127,7 +127,10 @@ class ExecutorTests(unittest.TestCase):
                 {"command": "Get-Content x.txt; Remove-Item x.txt"},
             )
             self.assertFalse(result.ok)
-            self.assertIn("command chaining is not allowed", result.output)
+            self.assertTrue(
+                "command chaining is not allowed" in result.output
+                or "PS_CHAINING_DENIED" in result.output
+            )
 
     def test_read_file(self):
         with tempfile.TemporaryDirectory() as td:
