@@ -12,7 +12,7 @@ Local-first Windows agent bridge for **LM Studio + local coding models + governe
 - Read-only bootstrap mode.
 - Structured evidence logs and rollback backups outside the repository.
 - No shell execution for writes: file mutation uses a structured `write_file` tool.
-- PowerShell is intentionally restricted to an allow-listed read-only command surface.
+- PowerShell is restricted to repository-owned, structured read-only operations; model text is never PowerShell source.
 - No `git push`, commit, delete, package install, registry/system changes, privilege escalation, or network side effects in v1.
 - Provider abstraction keeps future cloud providers optional.
 
@@ -44,7 +44,7 @@ Allowed model tools:
 - `hash_file`
 - `git_status`
 - `git_diff`
-- `run_powershell` — read-only allow-listed command prefixes only
+- `run_powershell` — registered `command_id` plus typed data fields only
 - `run_tests` — fixed command configured by the operator, no shell
 - `write_file` — exact manifest + hash guarded + atomic write + backup
 - `rollback_last_write`
@@ -62,6 +62,7 @@ Default-denied surfaces include:
 - `git commit`
 - `git reset --hard`
 - arbitrary shell chaining
+- arbitrary PowerShell source, executables, argv, switches, scripts, and environment manipulation
 - environment-variable enumeration
 
 ## Requirements
@@ -166,6 +167,15 @@ Example:
 If the model attempts any other path, execution stops fail-closed.
 
 ## 6. Tests
+
+### Structured PowerShell compatibility tool
+
+`run_powershell` no longer accepts a raw `command` string. Its deliberately small registry is
+`get_item`, `resolve_path`, and `select_string`. Requests use `command_id`, a repository-relative
+`path`, and, for `select_string`, a literal `pattern`. Unknown fields and command IDs fail closed.
+Paths are canonicalized under `repository.root`, and the resulting validated absolute path is passed
+as data to the fixed repository-owned `scripts/Invoke-UPABReadOnly.ps1` wrapper via `-File`.
+Existing `read_file`, `list_files`, `hash_file`, `git_status`, and `git_diff` tools remain preferred.
 
 The default test command is operator-controlled in config:
 

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from upab.chat_watch import ChatMessageWatcher, WatchedMessage
-from upab.command_preflight import preflight_powershell
 from upab.file_search import search_files
 
 
@@ -28,14 +27,3 @@ def test_file_search_finds_named_file(tmp_path):
     results = search_files([tmp_path], query="projectstate")
     assert len(results) == 1
     assert results[0].path.endswith("ProjectState.yaml")
-
-
-def test_powershell_preflight_rejects_path_escape(tmp_path, monkeypatch):
-    monkeypatch.setattr("shutil.which", lambda _: "powershell.exe")
-    result = preflight_powershell(
-        "Get-ChildItem",
-        repository_root=tmp_path,
-        target_paths=("../outside.txt",),
-    )
-    assert result.ok is False
-    assert any("escapes repository root" in reason for reason in result.reasons)

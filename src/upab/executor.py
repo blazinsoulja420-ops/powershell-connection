@@ -15,10 +15,14 @@ from .evidence import EvidenceLog
 from .gitguard import GitGuard, GitGuardError
 from .governance import GovernanceGate, sha256_file
 from .models import ToolResult
+from .powershell_commands import CommandRequestError
 from .security import redact, sanitized_env
 
 
 class ToolExecutor:
+    POWERSHELL_STDOUT_LIMIT = 1024 * 1024
+    POWERSHELL_STDERR_LIMIT = 256 * 1024
+
     def __init__(self, cfg: dict[str, Any]):
         self.cfg = cfg
         self.repo_root = Path(cfg["repository"]["root"]).resolve()
@@ -32,6 +36,8 @@ class ToolExecutor:
             max_output_chars=int(self.gov["max_output_chars"]),
         )
         self.git = GitGuard(self.repo_root, cfg["repository"].get("expected_head"))
+        self.powershell_wrapper = Path(__file__).resolve().parents[2] / "scripts" / "Invoke-UPABReadOnly.ps1"
+        self.powershell_wrapper_sha256 = sha256_file(self.powershell_wrapper)
         self.last_backup: dict[str, Any] | None = None
         self.write_history: list[dict[str, Any]] = []
 
@@ -178,52 +184,49 @@ class ToolExecutor:
         return ToolResult(cp.returncode == 0, redact(output, int(self.gov["max_output_chars"])), {"returncode": cp.returncode})
 
     def _run_powershell(self, args: dict[str, Any]) -> ToolResult:
-        command = str(args["command"])
         exe = str(self.gov.get("powershell_executable", "powershell.exe"))
-        allowed_prefixes = tuple(
-            str(item)
-            for item in self.gov.get("powershell_allow_prefixes", [])
-        )
-        raw_targets = args.get("target_paths") or ()
-        if not isinstance(raw_targets, (list, tuple)) or not all(
-            isinstance(item, str)
-            for item in raw_targets
-        ):
-            return ToolResult(
-                False,
-                "PowerShell target_paths must be an array of strings",
-                fatal=True,
+        wrapper = self.powershell_wrapper
+        if not wrapper.is_file() or sha256_file(wrapper) != self.powershell_wrapper_sha256:
+            return ToolResult(False, "BLOCKED [PS_WRAPPER_MISSING]: Trusted PowerShell wrapper is missing or changed during this session", fatal=True)
+        try:
+            preflight = preflight_powershell(
+                args, repository_root=self.repo_root, executable=exe, wrapper=wrapper
             )
-
-        preflight = preflight_powershell(
-            command,
-            repository_root=self.repo_root,
-            target_paths=tuple(raw_targets),
-            executable=exe,
-            allowed_prefixes=allowed_prefixes,
-        )
-        if not preflight.ok:
-            return ToolResult(
-                False,
-                "BLOCKED [POWERSHELL_PREFLIGHT]: " + "; ".join(preflight.reasons),
-                {
-                    "target_paths": list(preflight.target_paths),
-                },
-                fatal=True,
-            )
-
-        cp = self._process(
-            [exe, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
-            int(self.gov["max_command_seconds"]),
-        )
-        output = (cp.stdout or "") + (("\nSTDERR:\n" + cp.stderr) if cp.stderr else "")
+        except CommandRequestError as exc:
+            return ToolResult(False, f"BLOCKED [{exc.code}]: {exc}", fatal=True)
+        argv = [
+            preflight.executable, "-NoLogo", "-NoProfile", "-NonInteractive",
+            "-ExecutionPolicy", "Bypass",
+            "-File", str(preflight.wrapper), "-Operation", preflight.spec.operation,
+            "-Path", str(preflight.bound_paths["path"]),
+        ]
+        if "pattern" in preflight.arguments:
+            argv.extend(["-Pattern", preflight.arguments["pattern"]])
+        timeout = min(int(self.gov["max_command_seconds"]), preflight.spec.timeout_seconds)
+        try:
+            cp = self._process(argv, timeout)
+        except subprocess.TimeoutExpired:
+            return ToolResult(False, "BLOCKED [PS_TIMEOUT]: Structured PowerShell operation timed out", fatal=True)
+        stdout = (cp.stdout or "")[: self.POWERSHELL_STDOUT_LIMIT]
+        stderr = (cp.stderr or "")[: self.POWERSHELL_STDERR_LIMIT]
+        output = stdout + (("\nSTDERR:\n" + stderr) if stderr else "")
+        ok = cp.returncode == 0
+        rendered = redact(output, int(self.gov["max_output_chars"]))
+        if not ok:
+            rendered = "BLOCKED [PS_EXECUTION_FAILED]: Trusted PowerShell operation failed\n" + rendered
         return ToolResult(
-            cp.returncode == 0,
-            redact(output, int(self.gov["max_output_chars"])),
+            ok,
+            rendered,
             {
                 "returncode": cp.returncode,
-                "target_paths": list(preflight.target_paths),
+                "command_id": preflight.spec.command_id,
+                "operation": preflight.spec.operation,
+                "path": str(preflight.bound_paths["path"]),
+                "timeout_seconds": timeout,
+                "stdout_truncated": len(cp.stdout or "") > self.POWERSHELL_STDOUT_LIMIT,
+                "stderr_truncated": len(cp.stderr or "") > self.POWERSHELL_STDERR_LIMIT,
             },
+            fatal=cp.returncode != 0,
         )
 
     def _run_tests(self, args: dict[str, Any]) -> ToolResult:

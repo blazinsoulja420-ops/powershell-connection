@@ -17,7 +17,7 @@ def cfg(root: Path):
             "require_canonical_for_mutation": True,
             "read_only": True,
             "authorized_write_paths": ["src/allowed.py"],
-            "powershell_allow_prefixes": ["Get-Content", "git status"],
+            "powershell_allowed_command_ids": ["get_item", "resolve_path", "select_string"],
         }
     }
 
@@ -50,7 +50,7 @@ class GovernanceTests(unittest.TestCase):
             self.assertFalse(d.allowed)
             self.assertEqual(d.code, "WRITE_NOT_IN_MANIFEST")
 
-    def test_dangerous_powershell_denied(self):
+    def test_raw_powershell_denied(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             gate = GovernanceGate(cfg(root), root)
@@ -58,18 +58,19 @@ class GovernanceTests(unittest.TestCase):
             self.assertFalse(d.allowed)
             self.assertTrue(d.fatal)
 
-    def test_chained_powershell_denied(self):
+    def test_unknown_powershell_command_id_denied(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             gate = GovernanceGate(cfg(root), root)
-            d = gate.authorize("run_powershell", {"command": "Get-Content x; Remove-Item x"})
+            d = gate.authorize("run_powershell", {"command_id": "other", "path": "x"})
             self.assertFalse(d.allowed)
+            self.assertEqual(d.code, "PS_COMMAND_UNKNOWN")
 
     def test_readonly_powershell_allowed(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             gate = GovernanceGate(cfg(root), root)
-            d = gate.authorize("run_powershell", {"command": "Get-Content README.md"})
+            d = gate.authorize("run_powershell", {"command_id": "get_item", "path": "README.md"})
             self.assertTrue(d.allowed)
 
 

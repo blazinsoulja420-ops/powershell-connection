@@ -30,22 +30,10 @@
       "-q"
     ],
     "powershell_executable": "powershell.exe",
-    "powershell_allow_prefixes": [
-      "Get-ChildItem",
-      "Get-Content",
-      "Get-Item",
-      "Get-FileHash",
-      "Test-Path",
-      "Resolve-Path",
-      "Select-String",
-      "git status",
-      "git diff",
-      "git show",
-      "git grep",
-      "git rev-parse",
-      "git ls-files",
-      "git log",
-      "python --version"
+    "powershell_allowed_command_ids": [
+      "get_item",
+      "resolve_path",
+      "select_string"
     ],
     "max_command_seconds": 300,
     "max_output_chars": 50000,

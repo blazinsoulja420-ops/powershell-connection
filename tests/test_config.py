@@ -28,7 +28,7 @@ class ConfigTests(unittest.TestCase):
                     "require_canonical_for_mutation": True,
                     "read_only": True,
                     "authorized_write_paths": ["src\\x.py"],
-                    "powershell_allow_prefixes": [],
+                    "powershell_allowed_command_ids": [],
                     "max_command_seconds": 1,
                     "max_output_chars": 100,
                     "max_file_read_bytes": 100,
