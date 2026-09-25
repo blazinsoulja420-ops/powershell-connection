@@ -42,7 +42,7 @@ def load_config(path: str | Path) -> dict[str, Any]:
         "require_canonical_for_mutation",
         "read_only",
         "authorized_write_paths",
-        "powershell_allow_prefixes",
+        "powershell_allowed_command_ids",
         "max_command_seconds",
         "max_output_chars",
         "max_file_read_bytes",
@@ -60,6 +60,10 @@ def load_config(path: str | Path) -> dict[str, Any]:
     gov["authorized_write_paths"] = [
         x.replace("\\", "/").lstrip("/") for x in gov["authorized_write_paths"]
     ]
+    if not isinstance(gov["powershell_allowed_command_ids"], list) or not all(
+        isinstance(x, str) and x for x in gov["powershell_allowed_command_ids"]
+    ):
+        raise ConfigError("governance.powershell_allowed_command_ids must be an array of non-empty strings")
 
     _require(state, "directory", "state")
     state["directory"] = str(Path(state["directory"]).expanduser().resolve())

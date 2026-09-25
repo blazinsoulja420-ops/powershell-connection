@@ -97,11 +97,15 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "run_powershell",
-            "description": "Run one allow-listed read-only PowerShell command. Chaining and mutation are denied.",
+            "description": "Run one registered read-only operation. No PowerShell source is accepted.",
             "parameters": {
                 "type": "object",
-                "properties": {"command": {"type": "string"}},
-                "required": ["command"],
+                "properties": {
+                    "command_id": {"type": "string", "enum": ["get_item", "select_string", "resolve_path"]},
+                    "path": {"type": "string"},
+                    "pattern": {"type": "string"},
+                },
+                "required": ["command_id", "path"],
                 "additionalProperties": False,
             },
         },

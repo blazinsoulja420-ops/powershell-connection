@@ -33,7 +33,7 @@ def make_cfg(root: Path, state: Path, allowed: list[str], read_only=False):
             "allow_test_execution": False,
             "test_command": ["python", "-c", "print('x')"],
             "powershell_executable": "powershell.exe",
-            "powershell_allow_prefixes": ["Get-Content"],
+            "powershell_allowed_command_ids": ["get_item", "resolve_path", "select_string"],
             "max_command_seconds": 10,
             "max_output_chars": 10000,
             "max_file_read_bytes": 10000,

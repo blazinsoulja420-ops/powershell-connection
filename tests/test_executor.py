@@ -29,7 +29,7 @@ def make_cfg(root: Path, state: Path, allowed: list[str]):
             "allow_test_execution": False,
             "test_command": ["python", "-c", "print('x')"],
             "powershell_executable": "powershell.exe",
-            "powershell_allow_prefixes": ["Get-Content"],
+            "powershell_allowed_command_ids": ["get_item", "resolve_path", "select_string"],
             "max_command_seconds": 10,
             "max_output_chars": 10000,
             "max_file_read_bytes": 10000,
@@ -79,6 +79,52 @@ class ExecutorTests(unittest.TestCase):
             )
             self.assertTrue(good.ok, good.output)
             self.assertEqual(p.read_text(), "new")
+
+    def test_run_powershell_blocks_raw_command(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            result = ex.execute(
+                "run_powershell",
+                {"command": "Remove-Item anything"},
+            )
+            self.assertFalse(result.ok)
+            self.assertTrue(
+                "PS_RAW_COMMAND_UNSUPPORTED" in result.output
+            )
+
+    def test_run_powershell_blocks_target_escape_before_execution(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            result = ex.execute(
+                "run_powershell",
+                {"command_id": "get_item", "path": "../outside.txt"},
+            )
+            self.assertFalse(result.ok)
+            self.assertIn("PS_PATH_ESCAPE", result.output)
+
+    def test_run_powershell_blocks_unknown_argument(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            root = base / "repo"
+            state = base / "state"
+            root.mkdir()
+            ex = ToolExecutor(make_cfg(root, state, []))
+            result = ex.execute(
+                "run_powershell",
+                {"command_id": "get_item", "path": "x.txt", "argv": ["bad"]},
+            )
+            self.assertFalse(result.ok)
+            self.assertTrue(
+                "PS_ARGUMENT_UNKNOWN" in result.output
+            )
 
     def test_read_file(self):
         with tempfile.TemporaryDirectory() as td:

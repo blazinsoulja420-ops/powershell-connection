@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from pathlib import Path
 from typing import Any
 
 from .models import Decision
+from .powershell_commands import COMMANDS
 
 
 AUTHORITY_PRECEDENCE = (
@@ -27,47 +27,6 @@ READ_TOOLS = {
     "git_status",
     "git_diff",
 }
-
-DENY_POWERSHELL_PATTERNS = [
-    r"(?i)\bRemove-Item\b",
-    r"(?i)\bClear-Content\b",
-    r"(?i)\bSet-Content\b",
-    r"(?i)\bAdd-Content\b",
-    r"(?i)\bOut-File\b",
-    r"(?i)\bNew-Item\b",
-    r"(?i)\bCopy-Item\b",
-    r"(?i)\bMove-Item\b",
-    r"(?i)\bRename-Item\b",
-    r"(?i)\bFormat-(Volume|Disk)\b",
-    r"(?i)\bClear-Disk\b",
-    r"(?i)\bInitialize-Disk\b",
-    r"(?i)\bSet-Partition\b",
-    r"(?i)\bdiskpart(?:\.exe)?\b",
-    r"(?i)\bSet-ExecutionPolicy\b",
-    r"(?i)\breg(?:\.exe)?\s+(add|delete|import|restore)\b",
-    r"(?i)\b(sc|net)\.exe\b",
-    r"(?i)\b(New|Set|Stop|Remove)-Service\b",
-    r"(?i)\b(Start-Process).*-Verb\s+RunAs\b",
-    r"(?i)\brunas(?:\.exe)?\b",
-    r"(?i)\b(Stop-Computer|Restart-Computer|shutdown(?:\.exe)?)\b",
-    r"(?i)\b(Invoke-WebRequest|Invoke-RestMethod|Start-BitsTransfer)\b",
-    r"(?i)\b(curl|wget|ssh|scp|ftp|bitsadmin)(?:\.exe)?\b",
-    r"(?i)\b(winget|choco|scoop)(?:\.exe)?\b",
-    r"(?i)\bpip(?:3)?\s+install\b",
-    r"(?i)\bnpm\s+(install|i)\b",
-    r"(?i)\bdotnet\s+tool\s+install\b",
-    r"(?i)\bgit\s+push\b",
-    r"(?i)\bgit\s+commit\b",
-    r"(?i)\bgit\s+reset\s+--hard\b",
-    r"(?i)\bgit\s+clean\b",
-    r"(?i)\bgit\s+checkout\s+--\b",
-    r"(?i)\bgit\s+restore\b",
-    r"(?i)\bGet-ChildItem\s+Env:",
-    r"(?i)\$env:",
-]
-
-CHAINING_RE = re.compile(r"(;|&&|\|\||\r|\n|`)")
-
 
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
@@ -127,36 +86,16 @@ class GovernanceGate:
             return Decision(True, "ALLOW_READ", "Read-only repository operation allowed")
 
         if tool == "run_powershell":
-            command = str(args.get("command", "")).strip()
-            if not command:
-                return Decision(False, "PS_EMPTY", "PowerShell command is empty", "LOW", False)
-            if CHAINING_RE.search(command):
-                return Decision(
-                    False,
-                    "PS_CHAINING_DENIED",
-                    "PowerShell command chaining/newlines/backticks are denied in v1",
-                    "HIGH",
-                    True,
-                )
-            for pattern in DENY_POWERSHELL_PATTERNS:
-                if re.search(pattern, command):
-                    return Decision(
-                        False,
-                        "PS_DENY_PATTERN",
-                        "PowerShell command matched a denied mutation/security/network pattern",
-                        "HIGH",
-                        True,
-                    )
-            allowed = self.gov.get("powershell_allow_prefixes", [])
-            if not any(command.lower().startswith(x.lower()) for x in allowed):
-                return Decision(
-                    False,
-                    "PS_PREFIX_NOT_ALLOWED",
-                    "PowerShell command is outside the configured read-only allow-list",
-                    "MEDIUM",
-                    True,
-                )
-            return Decision(True, "ALLOW_PS_READ", "Allow-listed read-only PowerShell command")
+            if "command" in args:
+                return Decision(False, "PS_RAW_COMMAND_UNSUPPORTED", "Raw PowerShell command input is unsupported", "HIGH", True)
+            command_id = args.get("command_id")
+            if not isinstance(command_id, str) or not command_id:
+                return Decision(False, "PS_COMMAND_ID_REQUIRED", "command_id is required", "MEDIUM", True)
+            if command_id not in COMMANDS:
+                return Decision(False, "PS_COMMAND_UNKNOWN", "Unknown structured PowerShell command", "MEDIUM", True)
+            if command_id not in self.gov.get("powershell_allowed_command_ids", []):
+                return Decision(False, "PS_COMMAND_NOT_ALLOWED", "Structured PowerShell command is not allowed", "MEDIUM", True)
+            return Decision(True, "ALLOW_PS_READ", "Registered read-only PowerShell operation allowed")
 
         if tool == "run_tests":
             if not self.gov.get("allow_test_execution", False):
