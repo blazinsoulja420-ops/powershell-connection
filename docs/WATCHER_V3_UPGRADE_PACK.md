@@ -237,6 +237,35 @@ denial-of-service handling, authenticated task/repository source identity,
 legacy watcher lockout/migration, approved executor integration, rollback
 and same-device Windows acceptance. CI cannot establish owner consent.
 
+## Stage 11 — native Windows WebAuthn readiness, NOT completed authentication
+
+- \`src/upab/relay/v3_webauthn_preflight.py\` calls only
+  \`WebAuthNGetApiVersionNumber\` and
+  \`WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable\`. No Windows Hello
+  popup, credential creation, authenticator assertion, network request,
+  registration or approval is requested. Native Win32 capabilities may be
+  present in CI even when the actual owner's device is unsupported or has
+  no enrolled credential. \`credential_enrolled=UNKNOWN\` in all cases.
+- \`src/upab/relay/v3_presence_challenge.py\` issues a *preview* challenge
+  with 32 random bytes, exact project ID/task ID/task SHA-256/review-only
+  scope, a 90-second expiry and a deterministic context fingerprint. It
+  rejects changed identities, scopes, nonces, times and forged approval flags.
+  The context fingerprint is **not signed or keyed**: it offers only a
+  development-time consistency check. This is NOT an authenticator challenge
+  accepted as authorization, and it is not persisted in a replay ledger.
+  Every response has \`owner_verified=false\`, no verified credential
+  assertion and \`execution_authorized=false\`.
+- To build a real verifier, a separate authenticated owner enrollment
+  ceremony must bind an approved origin/relying-party ID, an enrolled
+  credential public key, a verified signed assertion with the user
+  verification flag, exact challenge/project/task digest, expected RP ID
+  hash and origin, expiry, monotonic or equivalent replay defenses and
+  secure registration storage. The broker must verify all of those before
+  issuing a separate one-time, scoped authorization to a governed executor.
+  No bare process SID, clipboard string or model output can approve tasks.
+- Windows CI validates detection and fail-closed construction/parsing, not
+  personal owner presence on the laptop or approved real execution.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
