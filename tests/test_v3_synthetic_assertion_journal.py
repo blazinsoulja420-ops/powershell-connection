@@ -78,7 +78,7 @@ class DurableSyntheticAssertionJournalTests(unittest.TestCase):
             def attempt():
                 barrier.wait(timeout=10)
                 try:
-                    result=inspect(SyntheticAssertionJournal(root),item)
+                    result=inspect(journal,item)
                     outcome=result["status"]
                 except PolicyBlocked:
                     outcome="BLOCKED"
