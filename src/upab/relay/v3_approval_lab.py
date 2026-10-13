@@ -68,7 +68,7 @@ class IsolatedApprovalLab:
                     "task_id TEXT NOT NULL, task_digest TEXT NOT NULL, "
                     "scope TEXT NOT NULL, expires_at TEXT NOT NULL, "
                     "phase TEXT NOT NULL CHECK(phase IN "
-                    "('PENDING','SIMULATED_APPROVED','CONSUMED')), "
+                    "('PENDING','SIMULATED_APPROVED','CONSUMED','EXPIRED')), "
                     "created_at TEXT NOT NULL)"
                 )
 
@@ -95,6 +95,13 @@ class IsolatedApprovalLab:
             with closing(self._open()) as db:
                 db.execute("BEGIN IMMEDIATE")
                 try:
+                    # Expiry is terminal. Reclaims capacity without reissuing
+                    # or replaying any challenge after the time limit.
+                    db.execute(
+                        "UPDATE challenges SET phase='EXPIRED' "
+                        "WHERE phase IN ('PENDING','SIMULATED_APPROVED') "
+                        "AND expires_at<=?", (current.isoformat(),)
+                    )
                     waiting = db.execute(
                         "SELECT count(*) FROM challenges WHERE phase IN "
                         "('PENDING','SIMULATED_APPROVED')"
@@ -132,7 +139,7 @@ class IsolatedApprovalLab:
                 db.execute("BEGIN IMMEDIATE")
                 try:
                     row = db.execute(
-                        "SELECT task_id,task_digest,scope,expires_at,phase "
+                        "SELECT task_id,task_digest,scope,expires_at,phase,created_at "
                         "FROM challenges WHERE nonce_hash=?", (digest,)
                     ).fetchone()
                     if (row is None or row[0] != FIXTURE_ID
@@ -141,6 +148,9 @@ class IsolatedApprovalLab:
                             or row[4] != old):
                         raise PolicyBlocked("challenge mismatch or already spent")
                     expires = datetime.fromisoformat(row[3]).astimezone(timezone.utc)
+                    created = datetime.fromisoformat(row[5]).astimezone(timezone.utc)
+                    if current < created:
+                        raise PolicyBlocked("approval time predates the request")
                     if current >= expires:
                         raise PolicyBlocked("lab challenge expired")
                     db.execute(
