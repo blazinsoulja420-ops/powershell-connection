@@ -345,6 +345,44 @@ to the exact allowed real task, single-use protected authorization issuance,
 safe legacy-watcher migration and same-laptop acceptance. This prototype
 does NOT authenticate a human or activate task execution.
 
+## Stage 14 — disposable Windows credential enrollment rehearsal
+
+New `src/upab/relay/v3_enrollment_lab.py` provides an explicitly
+**synthetic and non-authorizing** enrollment challenge state machine:
+
+- A bounded four-slot SQLite journal stores hashes of 32-byte random
+  challenges, issuance and 90-second expiry timestamps, and terminal phases.
+- Only an explicitly invoked `synthetic_test_only=True` method can advance
+  a challenge. It seals a pre-existing **public development P-256 credential**
+  using Windows current-user DPAPI and stores ciphertext with `trusted=0`
+  enforced by SQLite. No arbitrary public key, private key, attestation,
+  WebAuthn registration API or live user identity is accepted.
+- A challenge is marked CLAIMED before encryption. A simulated interruption
+  leaves it quarantined; exclusive recovery changes CLAIMED to INTERRUPTED
+  rather than restarting. Expired/duplicate claims and concurrent attempts
+  are rejected. Corrupt ciphertext cannot be loaded as a valid test fixture.
+- Test data may be persisted **only** inside disposable `upab-v3-lab-*`
+  directories directly under the OS temporary directory. This module has
+  no launch hook and cannot access external project repositories.
+- Responses always report credential_enrolled=false,
+  owner_authenticated=false, attestation_verified=false,
+  approval_issued=false, execution_authorized=false.
+
+Limitations: DPAPI current-user ciphertext is NOT a trust anchor against
+a compromised process running as that user, and the SQLite file has NOT
+been hardened with Windows protected service identity/DACL/open-by-handle.
+The synthetic record is never eligible for authorization. No actual
+Windows Hello `WebAuthNAuthenticatorMakeCredential` ceremony was run.
+
+Before real owner enrollment: select a genuine approved RP ID and HTTPS
+origin, build a verifiable WebAuthn registration/attestation ceremony,
+bind the user-presence challenge to that enrollment, verify the RP ID hash
+and P-256 credential public key, establish protected credential record
+integrity and lifecycle, test account/session/IPC isolation, then perform
+an owner-approved local Windows Hello test. Only after that can a separate
+authorization design be reviewed for actual tasks; no live task execution
+is permitted by this stage.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
