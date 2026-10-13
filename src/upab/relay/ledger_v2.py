@@ -7,6 +7,7 @@ participate in v2's transaction and cannot enforce its replay guarantees.
 from __future__ import annotations
 
 import hashlib
+from contextlib import closing
 import json
 import secrets
 import sqlite3
@@ -36,7 +37,7 @@ class RelayLedgerV2:
         return conn
 
     def _initialize(self) -> None:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 conn.execute(
@@ -89,7 +90,7 @@ class RelayLedgerV2:
                 raise
 
     def current_nonce(self) -> str:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             row = conn.execute(
                 "SELECT value FROM state WHERE key='current_nonce'"
             ).fetchone()
@@ -98,7 +99,7 @@ class RelayLedgerV2:
         return str(row[0])
 
     def seen_task_ids(self) -> set[str]:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             return {row[0] for row in conn.execute("SELECT task_id FROM consumed")}
 
     def consume(self, task_id: str, digest: str, supplied_nonce: str) -> str:
@@ -106,7 +107,7 @@ class RelayLedgerV2:
             raise ValueError("invalid task_id")
         if not isinstance(supplied_nonce, str) or not supplied_nonce:
             raise ValueError("invalid relay nonce")
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 row = conn.execute(
