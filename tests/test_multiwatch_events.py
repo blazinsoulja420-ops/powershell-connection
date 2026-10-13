@@ -67,6 +67,46 @@ class WindowsProjectEventsTests(unittest.TestCase):
         with WindowsProjectEvents(self.registry) as observer:
             self.assertIsNone(observer.wait_once(timeout_ms=40))
 
+
+    def test_five_projects_receive_independent_events(self):
+        profiles = [
+            ("poindexter", "UP-UHAIB-001-Poindexter"),
+            ("universal-ai", "Universal-AI-"),
+            ("uasn", "UASN-AI-Specialist"),
+            ("kali-linux", "Kali-Linux-"),
+            ("researchos", "UP-RES-001-Autonomous-Research-System"),
+        ]
+        base = Path(self.temp.name)
+        raw = {"schema": "upab.multi-project.registry.v1", "projects": []}
+        roots = []
+        for project_id, repository_name in profiles:
+            root = base / ("repo-" + project_id)
+            state = base / ("state-" + project_id)
+            root.mkdir()
+            state.mkdir()
+            subprocess.run(["git", "-C", str(root), "init", "-q"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "remote", "add", "origin",
+                 "https://github.com/blazinsoulja420-ops/" + repository_name + ".git"],
+                check=True,
+            )
+            roots.append(root)
+            raw["projects"].append({
+                "id": project_id,
+                "repository": "blazinsoulja420-ops/" + repository_name,
+                "channel_id": "upab-" + project_id,
+                "watch_enabled": True,
+                "execution_enabled": False,
+                "local_root": str(root),
+                "state_directory": str(state),
+            })
+        registry = ProjectRegistry.from_object(raw)
+        with WindowsProjectEvents(registry) as observer:
+            for root in roots:
+                (root / "change.txt").write_text("test", encoding="utf-8")
+            observed = [observer.wait_once(timeout_ms=5000) for _ in roots]
+        self.assertEqual(set(observed), {project_id for project_id, _ in profiles})
+
     def test_observer_fails_before_subscription_if_origin_changes(self):
         subprocess.run(
             ["git", "-C", str(self.repo), "remote", "set-url", "origin",
