@@ -15,7 +15,6 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from ..config import load_config
 from .schema import TASK_BEGIN, TASK_END
 
 WM_CLIPBOARDUPDATE = 0x031D
@@ -264,10 +263,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_events < 0 or args.max_events > 10000:
         parser.error("--max-events must be 0..10000")
     try:
-        from .clipboard import WindowsClipboard
+        from .clipboard_limited_v2 import BoundedWindowsClipboard
 
         with WindowsClipboardEvents() as source:
-            observer = PassiveClipboardObserver(WindowsClipboard())
+            observer = PassiveClipboardObserver(BoundedWindowsClipboard())
             observer.suppress_startup()
             print("UPAB_WATCHER_V2_PASSIVE_OBSERVER_STARTED", flush=True)
             while True:
