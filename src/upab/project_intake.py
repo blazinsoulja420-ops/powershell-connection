@@ -106,6 +106,13 @@ def _guess_idea_name(details: str) -> str:
     return _clean_name(details)
 
 
+def _reviewable_idea_name(details: str) -> str | None:
+    try:
+        return _guess_idea_name(details)
+    except IntakeError:
+        return None
+
+
 def _aliases(profile) -> set[str]:
     repo_name = profile.repository.split("/", 1)[1]
     names = (profile.id, repo_name, repo_name.split("-", 1)[-1])
@@ -153,7 +160,7 @@ def classify_request(request: str, registry: ProjectRegistry) -> dict[str, Any]:
                 idea = _IDEA.fullmatch(_TRAILING.sub("", normalized))
             if idea and idea.group(1):
                 mode = "idea"
-                candidate_name = _reviewable_name(_guess_idea_name(idea.group(1))) if _reviewable_name(idea.group(1)) is not None else None
+                candidate_name = _reviewable_idea_name(idea.group(1))
 
     slug: str | None = None
     needs_name = False
