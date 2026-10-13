@@ -109,6 +109,47 @@ class ApprovalLabTests(unittest.TestCase):
             self.assertEqual(outcomes.count("done"),1,outcomes)
             self.assertEqual(outcomes.count("blocked"),5,outcomes)
 
+    def test_expired_challenges_free_queue_without_replay(self):
+        with tempfile.TemporaryDirectory(prefix="upab-v3-lab-") as td:
+            broker=IsolatedApprovalLab(td)
+            issued=[broker.request(now=NOW) for _ in range(8)]
+            with self.assertRaisesRegex(PolicyBlocked, "queue full"):
+                broker.request(now=NOW)
+            new_item=broker.request(now=NOW+timedelta(seconds=91))
+            self.assertNotEqual(new_item["challenge"],issued[0]["challenge"])
+            with self.assertRaises(PolicyBlocked):
+                broker.simulate_approval(
+                    issued[0]["challenge"],
+                    now=NOW+timedelta(seconds=91),
+                    test_simulation=True,
+                )
+
+    def test_backdated_approval_cannot_be_claimed(self):
+        with tempfile.TemporaryDirectory(prefix="upab-v3-lab-") as td:
+            broker=IsolatedApprovalLab(td)
+            item=broker.request(now=NOW)
+            with self.assertRaisesRegex(PolicyBlocked, "predates"):
+                broker.simulate_approval(
+                    item["challenge"],now=NOW-timedelta(seconds=1),
+                    test_simulation=True,
+                )
+            broker.simulate_approval(
+                item["challenge"],now=NOW,test_simulation=True
+            )
+            with self.assertRaisesRegex(PolicyBlocked, "predates"):
+                broker.run_fixed_fixture(
+                    item["challenge"],now=NOW-timedelta(seconds=1)
+                )
+            self.assertEqual(SyntheticSingleWorker(td).status()["state"],"PENDING")
+
+    def test_named_lab_inside_an_arbitrary_project_root_rejected(self):
+        with tempfile.TemporaryDirectory() as outside:
+            nested=__import__("pathlib").Path(outside)/"upab-v3-lab-foreign"
+            nested.mkdir()
+            with self.assertRaises(PolicyBlocked):
+                IsolatedApprovalLab(nested)
+            self.assertEqual(list(nested.iterdir()), [])
+
     def test_arbitrary_root_refused(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(PolicyBlocked):
