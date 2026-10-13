@@ -383,6 +383,43 @@ an owner-approved local Windows Hello test. Only after that can a separate
 authorization design be reviewed for actual tasks; no live task execution
 is permitted by this stage.
 
+## Stage 15 — strict WebAuthn registration inspection (non-authorizing)
+
+- `src/upab/relay/v3_registration_inspection.py` is a dependency-free,
+  read-only parser for bounded `attestationObject` CBOR and clientDataJSON.
+  It supports `fmt=none` and an empty attestation statement only. This
+  provides **no attestation trust**, even when it parses successfully.
+- Checks the exact caller-supplied 32-byte challenge, `webauthn.create`,
+  HTTPS relying-party origin, RP ID SHA-256 in authenticatorData, and
+  authenticator UP/UV/AT bits; rejects unsupported extensions and RFU bits.
+- Extracts an extension-free attested credential ID, sign counter, AAGUID
+  and COSE EC2/ES256/P-256 public key. It strictly checks lengths, known
+  fields, no duplicate CBOR map keys, no trailing bytes or noncanonical
+  integer encodings. It outputs only hashes of candidate credential ID
+  and public key, never raw private key or approval token.
+- A successful response ALWAYS says `attestation_trust_verified=false`,
+  `trusted_relying_party_configured=false`,
+  `challenge_was_issued_by_trusted_broker=false`,
+  `credential_record_stored=false`, `owner_authenticated=false` and
+  `execution_authorized=false`. Supplied RP ID/challenge/origin are
+  untrusted unless independently anchored by a protected approval broker.
+- The strict parser does not prove the candidate EC point lies on P-256,
+  establish authenticator manufacturer provenance, verify a trust chain,
+  enroll an owner's Windows Hello credential, or implement production
+  credential storage. Some legitimate WebAuthn formats/extensions are
+  intentionally unsupported, and such registration responses fail closed.
+- `tests/test_v3_registration_inspection.py` verifies a synthetic CBOR
+  `fmt=none` registration and rejected malformed CBOR, duplicate keys,
+  wrong origin/challenge/RP ID, missing flags, wrong algorithms, and
+  oversized/truncated registration inputs.
+
+Windows' `WebAuthNAuthenticatorMakeCredential` is a separate modal user-
+presence operation that must be initiated only on the owner's machine
+with explicit consent; it is NOT called by this component. Genuine
+enrollment also requires selecting an RP/origin, trusted challenge
+issuance and a protected identity and credential store, followed by
+independent owner-presence verification and real Windows acceptance.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
