@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from pathlib import Path
 import threading
 import unittest
 
@@ -69,6 +70,26 @@ class SyntheticSingleWorkerTests(unittest.TestCase):
             self.assertEqual(reports.count("done"), 1, reports)
             self.assertEqual(reports.count("blocked"), 5, reports)
             self.assertEqual(worker.status()["attempts"], 1)
+
+    def test_relay_target_must_be_an_ordinary_directory(self):
+        with tempfile.TemporaryDirectory(prefix="upab-v3-lab-") as td:
+            relay = Path(td) / "relay"
+            relay.write_text("not a directory", encoding="utf-8")
+            with self.assertRaises(PolicyBlocked):
+                SyntheticSingleWorker(td)
+            self.assertEqual(relay.read_text(encoding="utf-8"), "not a directory")
+
+    def test_symlinked_relay_directory_is_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="upab-v3-lab-") as td:
+            with tempfile.TemporaryDirectory() as target:
+                relay = Path(td) / "relay"
+                try:
+                    relay.symlink_to(Path(target), target_is_directory=True)
+                except (OSError, NotImplementedError):
+                    self.skipTest("runner does not allow symlinks")
+                with self.assertRaises(PolicyBlocked):
+                    SyntheticSingleWorker(td)
+                self.assertEqual(list(Path(target).iterdir()), [])
 
     def test_non_fixture_root_and_invalid_args_denied(self):
         with tempfile.TemporaryDirectory() as td:
