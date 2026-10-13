@@ -11,6 +11,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
+import tempfile
 import stat
 import sqlite3
 
@@ -57,6 +58,8 @@ class SyntheticSingleWorker:
         self.root = supplied.resolve(strict=True)
         if not self.root.name.startswith("upab-v3-lab-"):
             raise PolicyBlocked("worker root changed on canonicalization")
+        if self.root.parent != Path(tempfile.gettempdir()).resolve():
+            raise PolicyBlocked("synthetic worker must use direct OS temporary child")
         # Database creation happens only on a disposable fixture root.
         self.path = self.root / "relay" / "synthetic_worker.sqlite3"
         self._refuse_redirected_path(self.path.parent, directory=True)
