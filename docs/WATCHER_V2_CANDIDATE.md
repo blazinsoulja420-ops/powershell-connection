@@ -9,7 +9,7 @@ The existing `src/upab/relay/ledger.py`, `watcher.py`, CLI commands, launcher, a
 
 - The candidate uses local SQLite (no external dependencies) in `<state>/relay/relay_v2.sqlite3`.
 - A `BEGIN IMMEDIATE` transaction checks the current nonce, detects task-ID replay, inserts a consumed nonce hash and task ID, and rotates the current nonce **as one commit**. SQLite `synchronous=FULL` is requested.
-- After a power loss, a committed task remains consumed; an uncommitted transaction is rolled back. Existing v1 ledger task IDs are imported on first initialization.
+- After a power loss, a committed task remains consumed; an uncommitted transaction is rolled back. Existing v1 ledger task IDs are imported on first initialization; malformed legacy ledger records stop migration instead of being silently skipped. The nonce is *always rotated* on first migration, invalidating any previously copied v1 task blocks.
 - Tests cover restart durability, legacy import, stale nonce, thread/process races, and aborted transactions.
 - The v2 ledger is not invoked by v1 `relay-watch` or `relay-run`. Creating it alone does not change deployed behavior.
 
