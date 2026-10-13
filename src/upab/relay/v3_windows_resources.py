@@ -5,7 +5,9 @@ execution. A valid resource sample is a suggestion, not an approval.
 """
 from __future__ import annotations
 
+import argparse
 import ctypes
+import json
 from ctypes import wintypes
 import sys
 import time
@@ -102,3 +104,21 @@ def admission_snapshot() -> dict[str, object]:
         "task_execution_enabled": False,
         "owner_authorized": False,
     }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Read-only local Watcher v3 Windows CPU/RAM sample"
+    )
+    parser.parse_args(argv)
+    try:
+        report = admission_snapshot()
+    except (OSError, PolicyBlocked) as exc:
+        print("WATCHER_V3_RESOURCES_BLOCKED: " + type(exc).__name__, file=sys.stderr)
+        return 7
+    print(json.dumps(report, sort_keys=True, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
