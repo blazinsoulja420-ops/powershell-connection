@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import sqlite3
+from contextlib import closing
 import sys
 import tempfile
 import threading
@@ -128,8 +129,9 @@ class DurableSyntheticAssertionJournalTests(unittest.TestCase):
             journal = SyntheticAssertionJournal(root)
             item = issue(journal)
             file=Path(root)/"relay"/"v3_synthetic_assertions.sqlite3"
-            with sqlite3.connect(file) as db:
+            with closing(sqlite3.connect(file)) as db:
                 db.execute("UPDATE challenges SET phase='CLAIMED'")
+                db.commit()
             restarted = SyntheticAssertionJournal(root)
             self.assertEqual(restarted.reconcile_after_restart(),1)
             self.assertEqual(restarted.summary()["counts"]["INTERRUPTED"],1)
