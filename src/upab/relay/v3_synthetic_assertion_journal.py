@@ -87,7 +87,7 @@ class SyntheticAssertionJournal:
                     "CREATE TABLE IF NOT EXISTS challenges "
                     "(nonce_hash TEXT PRIMARY KEY, task_id TEXT NOT NULL, "
                     "project_id TEXT NOT NULL, digest TEXT NOT NULL, "
-                    "context_hash TEXT NOT NULL, expiry TEXT NOT NULL, "
+                    "context_hash TEXT NOT NULL, created TEXT NOT NULL, expiry TEXT NOT NULL, "
                     "phase TEXT NOT NULL CHECK(phase IN "
                     "('PENDING','CLAIMED','CRYPTO_VERIFIED_ONLY',"
                     "'REJECTED','INTERRUPTED','EXPIRED')), "
@@ -97,6 +97,7 @@ class SyntheticAssertionJournal:
                            "ON challenges(phase,expiry)")
 
     def _db(self):
+        _check_path(self.path.parent, directory=True)
         _check_path(self.path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(str(self.path), timeout=10, isolation_level=None)
@@ -128,9 +129,9 @@ class SyntheticAssertionJournal:
                 if count >= CAPACITY:
                     raise PolicyBlocked("bounded synthetic assertion queue full")
                 db.execute(
-                    "INSERT INTO challenges VALUES (?,?,?,?,?,?,?,?)",
+                    "INSERT INTO challenges VALUES (?,?,?,?,?,?,?,?,?)",
                     (nonce_hash, task_id, project_id, task_sha256.upper(),
-                     context_digest, expiry, "PENDING",
+                     context_digest, instant.isoformat(), expiry, "PENDING",
                      1 if fixed_public_fixture else 0),
                 )
                 db.execute("COMMIT")
@@ -168,16 +169,19 @@ class SyntheticAssertionJournal:
             db.execute("BEGIN IMMEDIATE")
             try:
                 row = db.execute(
-                    "SELECT task_id,project_id,digest,context_hash,expiry,phase,"
+                    "SELECT task_id,project_id,digest,context_hash,created,expiry,phase,"
                     "is_fixed_fixture FROM challenges WHERE nonce_hash=?",
                     (nonce_hash,),
                 ).fetchone()
                 if (row is None or row[:4] !=
                         (task_id, project_id, task_sha256.upper(),
                          hashlib.sha256(context).hexdigest())
-                        or row[5] != "PENDING"):
+                        or row[6] != "PENDING"):
                     raise PolicyBlocked("unknown, reused, or incorrectly bound nonce")
-                expiry = datetime.fromisoformat(row[4]).astimezone(timezone.utc)
+                created = datetime.fromisoformat(row[4]).astimezone(timezone.utc)
+                expiry = datetime.fromisoformat(row[5]).astimezone(timezone.utc)
+                if instant < created:
+                    raise PolicyBlocked("synthetic challenge time predates issue")
                 if instant >= expiry:
                     db.execute("UPDATE challenges SET phase='EXPIRED' WHERE nonce_hash=?",
                                (nonce_hash,))
@@ -185,7 +189,7 @@ class SyntheticAssertionJournal:
                     raise PolicyBlocked("synthetic challenge expired")
                 # Only hardcoded public fixture can demonstrate a cryptographic
                 # success; arbitrary key enrollment is intentionally impossible.
-                if row[6] != 1 or supplied != PUBLIC_FIXTURE_CHALLENGE:
+                if row[7] != 1 or supplied != PUBLIC_FIXTURE_CHALLENGE:
                     raise PolicyBlocked("random challenge lacks a fixture authenticator")
                 db.execute("UPDATE challenges SET phase='CLAIMED' WHERE nonce_hash=?",
                            (nonce_hash,))
