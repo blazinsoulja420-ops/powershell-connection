@@ -130,6 +130,19 @@ class NativeDenyOnlyPipeTests(unittest.TestCase):
         self.assertEqual(result[1], "PolicyBlocked")
         self.assertTrue(reply["server_rejected"])
 
+    def test_unconnected_server_times_out_without_becoming_persistent(self):
+        started = time.monotonic()
+        with self.assertRaises(PolicyBlocked):
+            DenyOnlyPipeServer().serve_once(timeout_ms=250)
+        self.assertLess(time.monotonic() - started, 5.0)
+
+    def test_oversized_frame_is_rejected_without_response(self):
+        frame = b"X" * 4097
+        reply, result = self._serve(frame, expect_response=False)
+        self.assertEqual(result[0], "blocked", result)
+        self.assertEqual(result[1], "PolicyBlocked")
+        self.assertTrue(reply["server_rejected"])
+
     def test_invalid_connection_timeout_is_refused(self):
         with self.assertRaises(PolicyBlocked):
             DenyOnlyPipeServer().serve_once(timeout_ms=0)
