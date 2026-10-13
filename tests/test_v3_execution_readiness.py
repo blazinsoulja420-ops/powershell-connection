@@ -75,6 +75,20 @@ class ExecutionReadinessTests(unittest.TestCase):
                         task_id="task-1", digest="A"*64, migration_inventory=fake
                     )
 
+    def test_unbounded_inventory_fields_are_rejected(self):
+        for changes in (
+            {"status": "ACCEPTED" + "X"*2000},
+            {"legacy_nonce_present": "yes"},
+            {"legacy_records": -1},
+            {"legacy_records": 1000001},
+        ):
+            fake = dict(inventory(), **changes)
+            with self.subTest(changes=changes):
+                with self.assertRaises(PolicyBlocked):
+                    evaluate_readiness(
+                        task_id="task-1", digest="A"*64, migration_inventory=fake
+                    )
+
     def test_no_command_or_executor_hooks(self):
         report = evaluate_readiness(task_id="task-1", digest="A"*64)
         self.assertFalse(report["side_effects"])
