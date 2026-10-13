@@ -110,6 +110,22 @@ class RelayLedgerV2Tests(unittest.TestCase):
             self.assertEqual(outcomes.count("accepted"), 1, outcomes)
             self.assertEqual(outcomes.count("blocked"), 3, outcomes)
 
+    def test_indexed_replay_lookup_is_precise_and_non_mutating(self):
+        with tempfile.TemporaryDirectory() as td:
+            ledger = RelayLedgerV2(td)
+            original_nonce = ledger.current_nonce()
+            self.assertFalse(ledger.has_seen("new-task"))
+            rotated = ledger.consume("new-task", "C" * 64, original_nonce)
+            self.assertTrue(ledger.has_seen("new-task"))
+            self.assertFalse(ledger.has_seen("other-task"))
+            self.assertFalse(ledger.has_seen("' OR 1=1 --"))
+            self.assertEqual(ledger.current_nonce(), rotated)
+            restarted = RelayLedgerV2(td)
+            self.assertTrue(restarted.has_seen("new-task"))
+            self.assertEqual(restarted.current_nonce(), rotated)
+            with self.assertRaises(ValueError):
+                ledger.has_seen("")
+
     def test_uncommitted_transaction_cannot_consume_nonce(self):
         with tempfile.TemporaryDirectory() as td:
             ledger = RelayLedgerV2(td)
