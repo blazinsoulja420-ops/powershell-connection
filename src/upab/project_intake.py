@@ -128,18 +128,22 @@ def _duplicates(registry: ProjectRegistry, candidate: str) -> list[str]:
 def classify_request(request: str, registry: ProjectRegistry) -> dict[str, Any]:
     """Classify ONLY manually submitted text; NEVER create/approve anything."""
     text = _safe_text(request)
-    normalized = _TRAILING.sub("", text)
+    normalized = text
     mode: str = "none"
     candidate_name: str | None = None
 
     if not _NEGATE.match(normalized):
         explicit = _EXPLICIT.fullmatch(normalized)
+        if explicit is None:
+            explicit = _EXPLICIT.fullmatch(_TRAILING.sub("", normalized))
         if explicit:
             mode = "explicit"
             if explicit.group(1):
                 candidate_name = _clean_name(explicit.group(1))
         else:
             idea = _IDEA.fullmatch(normalized)
+            if idea is None:
+                idea = _IDEA.fullmatch(_TRAILING.sub("", normalized))
             if idea and idea.group(1):
                 mode = "idea"
                 candidate_name = _guess_idea_name(idea.group(1))
