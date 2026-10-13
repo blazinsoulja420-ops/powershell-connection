@@ -5,6 +5,7 @@ Optional local UI and authenticated inbox are future integration milestones.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -34,7 +35,7 @@ def status_snapshot(state_dir: str | Path) -> dict[str, object]:
         raise PolicyBlocked("checkpoint path is not a plain file")
     try:
         uri = database.as_uri() + "?mode=ro"
-        with sqlite3.connect(uri, uri=True, timeout=5) as db:
+        with closing(sqlite3.connect(uri, uri=True, timeout=5)) as db:
             values = dict(db.execute("SELECT phase,count(*) FROM reviews GROUP BY phase"))
     except sqlite3.Error as exc:
         raise PolicyBlocked("checkpoint snapshot unreadable: " + type(exc).__name__) from exc
