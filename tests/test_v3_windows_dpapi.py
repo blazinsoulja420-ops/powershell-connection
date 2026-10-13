@@ -24,6 +24,15 @@ class CurrentUserDPAPITests(unittest.TestCase):
         self.assertEqual(unprotect_for_current_user(second), plaintext)
         self.assertGreater(len(first), len(plaintext))
 
+    def test_maximum_plaintext_roundtrip_with_ciphertext_overhead(self):
+        if sys.platform != "win32":
+            self.skipTest("native Windows DPAPI only")
+        plaintext = b"X" * 65536
+        ciphertext = protect_for_current_user(plaintext)
+        self.assertGreater(len(ciphertext), len(plaintext))
+        self.assertLessEqual(len(ciphertext), 131072)
+        self.assertEqual(unprotect_for_current_user(ciphertext), plaintext)
+
     def test_corrupt_ciphertext_is_denied(self):
         if sys.platform != "win32":
             self.skipTest("Windows DPAPI only")
