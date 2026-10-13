@@ -1,0 +1,80 @@
+{
+  "schema": "upab.watcher-v3.features.v1",
+  "project_limit": 64,
+  "monitor_limit": 32,
+  "auto_activation": false,
+  "features": [
+    {
+      "id": "secure_execution_controller",
+      "stage": "planned",
+      "description": "authenticated owner approval, v1/v2 mutual exclusion and controlled execution",
+      "enabled": false
+    },
+    {
+      "id": "intelligent_task_scheduler",
+      "stage": "candidate_policy",
+      "description": "bounded priority-aware review scheduling",
+      "enabled": false
+    },
+    {
+      "id": "crash_recovery_engine",
+      "stage": "candidate_review_only",
+      "description": "interrupted reviewer metadata quarantined",
+      "enabled": false
+    },
+    {
+      "id": "local_task_inbox",
+      "stage": "candidate_schema_only",
+      "description": "request metadata validation, no network listener",
+      "enabled": false
+    },
+    {
+      "id": "automatic_health_monitor",
+      "stage": "candidate_policy",
+      "description": "read-only heartbeat and stale detection",
+      "enabled": false
+    },
+    {
+      "id": "resource_aware_scheduling",
+      "stage": "candidate_policy",
+      "description": "fail-closed resource admission suggestions",
+      "enabled": false
+    },
+    {
+      "id": "task_dependency_engine",
+      "stage": "candidate_policy",
+      "description": "dependency-gated metadata review",
+      "enabled": false
+    },
+    {
+      "id": "smart_retry_system",
+      "stage": "candidate_policy",
+      "description": "read-only transient classification with bounded backoff",
+      "enabled": false
+    },
+    {
+      "id": "task_checkpointing",
+      "stage": "candidate_review_only",
+      "description": "durable review checkpoint persistence",
+      "enabled": false
+    },
+    {
+      "id": "performance_analytics",
+      "stage": "candidate_policy",
+      "description": "allowlisted counters, no task content",
+      "enabled": false
+    },
+    {
+      "id": "automatic_log_management",
+      "stage": "candidate_module",
+      "description": "allowlisted bounded rotating diagnostics",
+      "enabled": false
+    },
+    {
+      "id": "update_rollback_manager",
+      "stage": "candidate_verify_only",
+      "description": "content hash verification and rollback preview",
+      "enabled": false
+    }
+  ]
+}
