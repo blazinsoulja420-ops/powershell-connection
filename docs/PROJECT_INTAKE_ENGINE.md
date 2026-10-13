@@ -57,6 +57,23 @@ Detection supports useful common phrasing but is not yet an LLM semantic
 classifier. Unknown/unrecognized requests require manual intake; never guess
 authority.
 
+## Preview folder structure and specialized chat prompts
+
+For a validated new-project proposal, a separate preview-only command creates
+an in-memory JSON blueprint (not filesystem files or ChatGPT conversations):
+
+    python -m upab.project_blueprint --registry .\config\multi-projects.example.json --text "Create a project called Motorcycle Diagnostic AI"
+
+The blueprint lists a proposed documentation/source/test folder structure and
+six distinct chat workstreams (Main Command Center, Research, Coding, Testing,
+Security, Deployment), each with a copy-ready starting prompt. It reports
+folder_created=false, repo_created=false, chat_created=false and
+creation_authorized=false. Duplicate, invalid or ambiguous project names fail
+closed rather than producing a potentially conflicting blueprint.
+
+Any actual creation must later use a separate owner-authenticated, individually
+authorized action. This candidate does not implement that action.
+
 ## Project name and security boundaries
 
 - Untrusted input is capped at 500 characters and one line; it is never used
