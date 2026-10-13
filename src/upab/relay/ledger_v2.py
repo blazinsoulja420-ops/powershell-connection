@@ -103,6 +103,19 @@ class RelayLedgerV2:
         with closing(self._connect()) as conn:
             return {row[0] for row in conn.execute("SELECT task_id FROM consumed")}
 
+    def has_seen(self, task_id: str) -> bool:
+        """Indexed SQLite replay lookup, avoiding full-history scans/copies.
+
+        Read-only precheck is advisory; consume() rechecks under BEGIN IMMEDIATE.
+        """
+        if not isinstance(task_id, str) or not task_id:
+            raise ValueError("invalid task_id")
+        with closing(self._connect()) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM consumed WHERE task_id=? LIMIT 1", (task_id,)
+            ).fetchone()
+        return row is not None
+
     def consume(self, task_id: str, digest: str, supplied_nonce: str) -> str:
         if not isinstance(task_id, str) or not task_id:
             raise ValueError("invalid task_id")
