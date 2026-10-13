@@ -266,6 +266,45 @@ and same-device Windows acceptance. CI cannot establish owner consent.
 - Windows CI validates detection and fail-closed construction/parsing, not
   personal owner presence on the laptop or approved real execution.
 
+## Stage 12 — native cryptographic ES256 assertion checking (candidate)
+
+- \`src/upab/relay/v3_assertion_crypto.py\` verifies a WebAuthn assertion
+  signature against supplied P-256 public key X/Y coordinates using the
+  Windows CNG BCrypt ECCPUBLICBLOB and BCryptVerifySignature APIs, without
+  installing an additional Python crypto package.
+- A strict compact parser verifies signed clientDataJSON type
+  \`webauthn.get\`, exact HTTPS origin, base64url-encoded 32-byte challenge,
+  explicit crossOrigin=false, exact SHA-256 RP ID hash, UP and UV flags,
+  no attested credentials or extensions in the assertion, and a strictly
+  increasing, positive authenticator signCount. Noncanonical DER ES256
+  signatures, duplicate JSON properties and incorrect signature hashes
+  fail closed. The supported minimal format excludes extension-bearing
+  authenticators and signCount=0 authenticators until a separately reviewed
+  counter/replay policy is established.
+- \`tests/test_v3_assertion_crypto.py\` uses one **PUBLIC synthetic test
+  vector**: public EC P-256 key coordinates and a valid precomputed signature
+  for a fictional RP/origin, then negative paths for wrong key, signature,
+  challenge, origin, RP ID hash, missing user verification, bad counter and
+  forged client data. The test private key is NOT stored in the repository.
+- Even after a valid cryptographic signature, the result always declares
+  \`trusted_credential_enrollment_proven=false\`,
+  \`challenge_replay_protection_connected=false\`,
+  \`owner_authenticated=false\`, \`approval_issued=false\`, and
+  \`execution_authorized=false\`. Anyone can supply a public key and
+  produce a valid signature with their own private key; therefore
+  **cryptographic signature matching alone is not owner authentication**.
+
+**Not yet implemented:** real WebAuthn credential registration with verified
+attestation/authenticator output and protected credential-record storage;
+human consent to enroll; trustworthy RP ID and origin with approved
+application setup; a protected server-side challenge/replay ledger bound to
+an actual client ceremony; an approved credential-ID lookup and monotonic
+counter transaction; a Windows Hello assertion request; complete
+registration and assertion integration on the owner's laptop; issuance of
+one-time review/execution approval from an isolated protected broker.
+No assertion in this candidate can grant authority to run a user task.
+Preserve all twelve upgrade flags disabled and all repositories disconnected.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
