@@ -43,6 +43,24 @@ or infer desktop integration from Windows CI alone. The Win32 event window
 still needs same-machine interactive-desktop validation, clipboard open/read
 fault tests, and before/after idle CPU and event latency measurements.
 
+## Stage 3 — indexed lookup + single-flight lock (candidate)
+
+- src/upab/relay/ledger_v2.py now provides has_seen(task_id), an indexed
+  SQLite lookup instead of materializing every consumed task ID during
+  replay checks. The authoritative check remains inside consume(), in an
+  atomic SQLite transaction; has_seen() is advisory only.
+- src/upab/relay/single_flight_v2.py provides a per-state-directory persistent
+  file lock using Windows msvcrt.locking (fcntl on other platforms).
+  Cooperating future v2 executors can use it for a single-flight owner,
+  fail-fast collision and automatic OS release on process exit.
+- tests/test_single_flight_v2.py verifies process isolation, re-acquisition,
+  collision and release. The lock is **not wired to an executor**.
+
+This lock does NOT prevent unmodified legacy v1 processes from using their
+own ledger. Activation still requires stopping and preventing v1, securely
+migrating state, and testing rollback. Neither the event observer nor the
+file lock grants permission to execute a task.
+
 ## Critical activation constraint
 
 **Never allow v1 and v2 to operate against the same state directory at the same time.** v1 reads and writes `nonce.txt` and `seen_tasks.jsonl` without a cross-process SQLite lock. v2 uses a different authoritative store. Concurrent operation or rolling back to v1 with old state risks replay or nonce divergence.
@@ -52,7 +70,7 @@ For future activation: stop all v1 processes, back up the private state director
 ## Missing for a deployable Watcher v2
 
 - Windows event-driven clipboard listener/startup suppression are now passive candidate components; real laptop acceptance NOT yet verified.
-- Guaranteed process exclusivity (same repository + channel + state).
+- Per-state cross-process single-flight lock implemented as a candidate; no verified v1 lockout or active executor integration yet.
 - Bounded single-worker execution and backpressure; no concurrent task execution.
 - Clipboard retry/recovery, timeout watchdog without unsafe worker termination.
 - Sanitized metrics and bounded/retained logs.
