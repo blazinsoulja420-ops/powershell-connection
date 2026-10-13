@@ -420,6 +420,43 @@ enrollment also requires selecting an RP/origin, trusted challenge
 issuance and a protected identity and credential store, followed by
 independent owner-presence verification and real Windows acceptance.
 
+## Stage 16 — guarded Windows Hello owner-enrollment preflight
+
+- `src/upab/relay/v3_owner_enrollment_preflight.py` checks Win32
+  WebAuthn API availability, platform-authenticator reporting and exported
+  MakeCredential/attestation-free/cancel functions. It only OBSERVES Windows
+  readiness; it never calls MakeCredential, displays Hello, registers a
+  credential or authorizes the watcher.
+- An optional RP-ID and HTTPS-origin pair is checked for exact HTTPS
+  canonical shape, DNS label validity and exclusion of test/reserved
+  hostnames. Syntactic acceptance is **not** proof of domain ownership,
+  owner consent, identity, or availability of the application.
+- The preflight returns a fail-closed checklist of missing trust gates:
+  approved RP/domain, secure challenge issuer, real owner-initiated UI,
+  verified registration and P-256 point, protected credential storage,
+  one-time scope-bound task approval, migration and laptop acceptance.
+  All enrollment/execution/approval status fields remain false.
+- Safe, read-only Windows PowerShell command from a local checked-out
+  candidate (not the installed watcher):
+
+      $env:PYTHONPATH = '.\src'
+      python -m upab.relay.v3_owner_enrollment_preflight
+
+  No real RP domain has been selected or verified. Do not use
+  `upab.example.test` or any reserved illustrative domain for genuine
+  credential creation.
+- Stage 15 registration inspection now also validates P-256 COSE public
+  coordinates using the curve equation and rejects off-curve points.
+  Neither key shape nor attestation format `none` creates owner trust.
+
+Actual native credential creation is a modal Windows UI operation that
+requires a verified relying party, authenticated challenge handling and
+the owner's interactive consent. None are available in the candidate.
+Prior to calling Windows Hello for real, review a bounded, cancellable,
+single-session user interface and a protected credential/nonce broker on
+the owner's laptop. Never start a credential enrollment from a watcher
+poll, repository update, AI output, clipboard event, or startup hook.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
