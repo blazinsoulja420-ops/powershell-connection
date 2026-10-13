@@ -46,12 +46,22 @@ class RelayLedgerV2Tests(unittest.TestCase):
                 encoding="utf-8",
             )
             ledger = RelayLedgerV2(td)
-            self.assertEqual(ledger.current_nonce(), "existing-secret-nonce")
+            self.assertNotEqual(ledger.current_nonce(), "existing-secret-nonce")
             self.assertIn("prior", ledger.seen_task_ids())
             with self.assertRaises(ValueError):
-                ledger.consume("prior", "D" * 64, "existing-secret-nonce")
-            self.assertEqual(ledger.current_nonce(), "existing-secret-nonce")
+                ledger.consume("prior", "D" * 64, ledger.current_nonce())
+            self.assertNotEqual(ledger.current_nonce(), "existing-secret-nonce")
             self.assertTrue((relay / "nonce.txt").exists())
+
+    def test_corrupt_legacy_ledger_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            relay = Path(td) / "relay"
+            relay.mkdir()
+            (relay / "seen_tasks.jsonl").write_text(
+                '{"task_id":"accepted"}\n{"truncated":', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "corrupt legacy relay ledger"):
+                RelayLedgerV2(td)
 
     def test_concurrent_threads_only_one_consumer(self):
         with tempfile.TemporaryDirectory() as td:
