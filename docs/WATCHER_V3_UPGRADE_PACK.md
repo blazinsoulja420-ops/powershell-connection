@@ -95,6 +95,31 @@ No integration with the existing task executor, GitHub, Universal AI, UASN,
 ResearchOS or Ollama was added. Production migration and security review
 remain blocked.
 
+## Stage 6 — isolated readiness and resource integration laboratory
+
+- src/upab/relay/v3_execution_readiness.py reports outstanding protected
+  owner authentication, approval issuance, repository attestation, legacy
+  process exclusion, executor isolation and Windows acceptance. It always
+  returns execution_allowed=false, even when presented with a verified
+  review-only proof. Forged authorization fields are rejected.
+- src/upab/relay/v3_windows_resources.py reads real Windows GetSystemTimes
+  and GlobalMemoryStatusEx counters, returning available physical RAM and
+  CPU utilization for an admission suggestion. It never runs a task.
+  Read-only report command in Windows PowerShell:
+
+      python -m upab.relay.v3_windows_resources
+
+- src/upab/relay/v3_synthetic_lab.py joins the existing v2 single-flight
+  guard, metadata-only review queue and SQLite checkpoint records using only
+  one hardcoded fictional fixture inside a disposable upab-v3-lab-* folder.
+  It tests duplicate refusal, review lifecycle and crash quarantine, but
+  does not connect the task executor or issue an approval.
+
+These modules are test candidates. Approval-proof verification does NOT
+prove owner authentication or create a protected Windows service. Synthetic
+review completion is not authorization to execute a user task. The existing
+v1 watcher and actual execution logic remain unchanged.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
