@@ -120,6 +120,30 @@ prove owner authentication or create a protected Windows service. Synthetic
 review completion is not authorization to execute a user task. The existing
 v1 watcher and actual execution logic remain unchanged.
 
+## Stage 7 — Windows identity evidence and fixed-workload run-once worker
+
+- src/upab/relay/v3_windows_identity.py reads the current Windows process
+  token's user SID and process session ID through Win32 APIs. It expressly
+  reports owner_authenticated=false, human_present=false and
+  execution_allowed=false. A process SID is NOT human consent, Windows Hello
+  proof or an authenticated approval ceremony. Do not emit the SID in logs.
+- src/upab/relay/v3_synthetic_worker.py runs one fixed public SHA-256 fixture
+  exclusively inside an explicitly named disposable upab-v3-lab-* folder.
+  It durably journals PENDING->RUNNING->DONE for that fixture and denies
+  duplicate runs, restart replays and unsafe automatic re-execution after
+  simulated interruption. It has no user task parser, external process
+  command, repository access or approval issuance.
+- Tests include native Windows SID/session observation, fixture contention
+  and crash injection, and blocking redirected fixture state directories.
+  Path checks are defense in depth: they are NOT proof of Windows DACL
+  correctness or race-free open-by-handle containment.
+
+Remaining blockers: a protected owner-authenticating Windows approval
+service, independent binding to live trusted task scope, robust secure
+storage and task execution authority, an approved migration with v1 stopped,
+and laptop acceptance with a real governed task. This stage changes no
+production runtime behavior and installs nothing.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
