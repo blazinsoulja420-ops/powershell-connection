@@ -23,7 +23,6 @@ import stat
 import tempfile
 
 from .single_flight_v2 import SingleFlightLock
-from .v3_assertion_crypto import inspect_es256_assertion
 from .v3_policy import PolicyBlocked
 from .v3_synthetic_assertion_journal import (
     PUBLIC_FIXTURE_RP, PUBLIC_FIXTURE_ORIGIN,
