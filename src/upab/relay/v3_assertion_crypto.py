@@ -154,11 +154,18 @@ def inspect_es256_assertion(
         raise PolicyBlocked("untrusted RP ID")
     if not isinstance(expected_origin, str) or len(expected_origin) > 300:
         raise PolicyBlocked("invalid origin")
-    origin = urlsplit(expected_origin)
-    if (origin.scheme != "https" or origin.hostname != expected_rp_id
-            or origin.username or origin.password or origin.port is not None
-            or origin.query or origin.fragment or origin.path
-            or expected_origin != "https://" + expected_rp_id):
+    try:
+        origin = urlsplit(expected_origin)
+        strict_origin = (
+            origin.scheme == "https" and origin.hostname == expected_rp_id
+            and origin.username is None and origin.password is None
+            and origin.port is None and not origin.query
+            and not origin.fragment and not origin.path
+            and expected_origin == "https://" + expected_rp_id
+        )
+    except ValueError as exc:
+        raise PolicyBlocked("invalid origin URL components") from exc
+    if not strict_origin:
         raise PolicyBlocked("expected RP and HTTPS origin not strictly bound")
     if (type(client_data_json) is not bytes
             or not 2 <= len(client_data_json) <= MAX_CLIENT_BYTES):
