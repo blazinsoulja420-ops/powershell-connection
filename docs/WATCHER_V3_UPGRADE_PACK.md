@@ -187,6 +187,11 @@ owner-authentication design without weakening the real approval boundary.
   methods are rejected. Accepted frames only return public denial/preview
   metadata with owner_authenticated=false and execution_authorized=false.
   **It does not create a pipe listener or authenticate a client.**
+- `v3_pipe_acl_preview.py` asks Win32 to parse a protected proposed
+  security descriptor with only the current process token SID and
+  LocalSystem principals. This validates syntax and non-null DACL
+  existence; it does NOT create a pipe, bind handles, authenticate peers,
+  apply DACLs, or prove origin/session isolation.
 - The future real Windows broker must create a local-only, authenticated
   pipe with a fixed single-user security descriptor, check peer token SID
   and session by impersonation per request, require actual user verification
