@@ -63,6 +63,7 @@ class WindowsProjectEvents:
         self._mutex = None
         self._handles: list[int] = []
         self._started = False
+        self._cursor = 0
 
     def __enter__(self) -> "WindowsProjectEvents":
         if self._started:
@@ -108,15 +109,18 @@ class WindowsProjectEvents:
             raise EventWatcherError("observer is not running")
         if type(timeout_ms) is not int or not 0 <= timeout_ms <= 10000:
             raise ValueError("timeout_ms must be within 0..10000")
-        arr = (wintypes.HANDLE * len(self._handles))(*self._handles)
-        outcome = self._kernel.WaitForMultipleObjects(
-            len(self._handles), arr, False, timeout_ms
-        )
+        count = len(self._handles)
+        # Round-robin ordering prevents one noisy project from starving others.
+        ordered = self._handles[self._cursor:] + self._handles[:self._cursor]
+        arr = (wintypes.HANDLE * count)(*ordered)
+        outcome = self._kernel.WaitForMultipleObjects(count, arr, False, timeout_ms)
         if outcome == _WAIT_TIMEOUT:
             return None
-        index = int(outcome) - _WAIT_OBJECT_0
-        if outcome == _WAIT_FAILED or not 0 <= index < len(self._handles):
+        offset = int(outcome) - _WAIT_OBJECT_0
+        if outcome == _WAIT_FAILED or not 0 <= offset < count:
             raise EventWatcherError("Windows change observer wait failed")
+        index = (self._cursor + offset) % count
+        self._cursor = (index + 1) % count
         if not self._kernel.FindNextChangeNotification(self._handles[index]):
             raise EventWatcherError("unable to rearm a Windows folder notification")
         return self._ids[index]
