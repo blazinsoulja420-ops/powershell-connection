@@ -60,6 +60,21 @@ initialized, it reports NOT_INITIALIZED.
 The v2 passive clipboard observer is independently available as a read-only
 candidate. It does not submit into the v3 policy or checkpoint modules.
 
+## Legacy v1 marker lockout (candidate)
+
+The legacy relay ledger now checks for a marker named
+`relay/v2_active.marker` before initialization and before each nonce lookup,
+replay lookup or task consumption. This is a **fail-closed safeguard**, not
+an activation procedure. Nothing in this PR creates the marker in a user's
+real state directory.
+
+This guard can stop new v1 operations once a separately authorized migration
+creates the marker. It does not retroactively block an operation already
+running or another unsupported v1 binary. Migration must still stop and
+verify all old processes, lock out old launch paths, take a protected backup,
+rotate nonce state, test rollback and independently verify authorization.
+Do not manually create the marker as a substitute for those steps.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
