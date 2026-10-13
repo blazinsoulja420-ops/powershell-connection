@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 import multiprocessing
 import tempfile
 import threading
@@ -113,7 +114,7 @@ class RelayLedgerV2Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             ledger = RelayLedgerV2(td)
             current = ledger.current_nonce()
-            with ledger._connect() as conn:
+            with closing(ledger._connect()) as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 conn.execute(
                     "UPDATE state SET value=? WHERE key='current_nonce'",
