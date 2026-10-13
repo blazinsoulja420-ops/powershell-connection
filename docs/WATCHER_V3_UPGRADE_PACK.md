@@ -144,6 +144,29 @@ storage and task execution authority, an approved migration with v1 stopped,
 and laptop acceptance with a real governed task. This stage changes no
 production runtime behavior and installs nothing.
 
+## Stage 8 — single-use approval protocol laboratory (NOT a live approval broker)
+
+- `src/upab/relay/v3_approval_lab.py` provides a **test-only** 90-second
+  nonce challenge journal, simulated approval decision, and spend-once
+  claim before the fixed public hash workload. It verifies expected
+  synthetic task ID/digest/scope; stale/unknown or reused challenges are
+  denied. Expired entries become terminal so queue capacity can recover.
+- `tests/test_v3_approval_lab.py` covers expiry, forgery, backdating,
+  concurrent claim, crash quarantine and replay denial.
+- Both lab modules require a disposable `upab-v3-lab-*` folder directly
+  beneath the canonical OS temporary directory, not a project checkout.
+- There is **no Windows Hello broker**, no proof of user verification, no
+  protected credential vault, no authenticated IPC, no secure signing
+  service, no subprocess command runner, and NO production approval.
+  The lab's `test_simulation=True` is deliberately not a credential.
+  A user may not approve real work by feeding a simulation to the watcher.
+- State directory symlink checks are defense-in-depth; secure Windows
+  file handles, final-component reparse safety and DACL validation remain
+  release requirements.
+
+Stage 8 establishes an inspectable baseline for later separate-process
+owner-authentication design without weakening the real approval boundary.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
