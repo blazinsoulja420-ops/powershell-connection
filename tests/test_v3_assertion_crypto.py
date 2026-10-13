@@ -87,6 +87,19 @@ class AssertionCryptoStage12Tests(unittest.TestCase):
                 with self.assertRaises(PolicyBlocked):
                     inspect(**change)
 
+    def test_invalid_origin_urls_fail_as_policy_blocks(self):
+        for value in (
+            "https://upab.example.test:wrong",
+            "https://upab.example.test:443",
+            "http://upab.example.test",
+            "https://upab.example.test/another",
+            "https://upab.example.test?token=unused",
+            "https://person@upab.example.test",
+        ):
+            with self.subTest(value=value):
+                with self.assertRaises(PolicyBlocked):
+                    inspect(expected_origin=value)
+
     def test_user_presence_uv_backup_flags_and_counter_advanced(self):
         for flags in (0x00,0x01,0x04,0x45,0x85,0x07,0x15,0x25):
             forged = AUTH[:32] + bytes([flags]) + AUTH[33:]
