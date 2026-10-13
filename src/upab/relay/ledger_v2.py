@@ -54,26 +54,27 @@ class RelayLedgerV2:
                 ).fetchone()
                 if initialized is None:
                     # One-time migration from a stopped v1 installation.
-                    previous = (
-                        self.legacy_nonce.read_text(encoding="utf-8").strip()
-                        if self.legacy_nonce.exists() else ""
-                    )
-                    nonce = previous or self._new_nonce()
+                    # Force a fresh nonce on first activation: a crashed v1
+                    # process may have appended a task without rotating nonce.
+                    # A copied v1 task must NEVER survive migration.
+                    nonce = self._new_nonce()
                     if self.legacy_seen.exists():
                         with self.legacy_seen.open("r", encoding="utf-8") as source:
-                            for line in source:
+                            for line_number, line in enumerate(source, start=1):
                                 try:
                                     record = json.loads(line)
-                                except json.JSONDecodeError:
-                                    continue
+                                except json.JSONDecodeError as exc:
+                                    raise ValueError(
+                                        f"corrupt legacy relay ledger at line {line_number}"
+                                    ) from exc
                                 if not isinstance(record, dict):
-                                    continue
+                                    raise ValueError("invalid legacy relay ledger record")
                                 task_id = record.get("task_id")
                                 if not isinstance(task_id, str) or not task_id:
-                                    continue
+                                    raise ValueError("invalid legacy relay ledger task ID")
                                 digest = record.get("sha256", "")
                                 if not isinstance(digest, str):
-                                    digest = ""
+                                    raise ValueError("invalid legacy relay ledger digest")
                                 conn.execute(
                                     "INSERT OR IGNORE INTO consumed "
                                     "(task_id, sha256, nonce_sha256, consumed_at_utc) "
