@@ -167,6 +167,37 @@ production runtime behavior and installs nothing.
 Stage 8 establishes an inspectable baseline for later separate-process
 owner-authentication design without weakening the real approval boundary.
 
+## Stage 9 — Windows user-scoped data protection + disarmed broker protocol
+
+- `v3_windows_dpapi.py` exposes current-user Win32 CryptProtectData and
+  CryptUnprotectData in memory. It requests UI-free DPAPI; it does NOT
+  use machine-wide decryptability, create a credential file, or prove
+  interactive user approval. Native Windows CI tests verify roundtrips
+  and malformed/tampered ciphertext rejection.
+- `v3_dpapi_fixture_store.py` stores one internally random **synthetic**
+  32-byte test seed in an existing disposable OS-temp test directory.
+  Uses O_EXCL to refuse overwrite and DPAPI ciphertext at rest, and
+  refuses export of decrypted seed. These are NOT approved signing keys.
+  Production custody still requires protected Windows ACLs, key rotation,
+  account/session isolation, secure handle-based path checks and a formal
+  secret-lifecycle design.
+- `v3_broker_contract.py` defines a compact versioned request frame and
+  a future named-pipe endpoint contract; unknown fields, duplicate JSON
+  keys, oversized messages, fake approval claims and all execute/approve
+  methods are rejected. Accepted frames only return public denial/preview
+  metadata with owner_authenticated=false and execution_authorized=false.
+  **It does not create a pipe listener or authenticate a client.**
+- The future real Windows broker must create a local-only, authenticated
+  pipe with a fixed single-user security descriptor, check peer token SID
+  and session by impersonation per request, require actual user verification
+  (Windows Hello/WebAuthn or separately approved equivalent), and issue a
+  one-time exact-scope proof from a protected isolated process. This must
+  be independently tested on the actual Windows device before enabling
+  ANY task execution.
+
+Do not interpret successful DPAPI decryption, presence of a Windows SID,
+a synthetically approved challenge or valid JSON as human authorization.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
