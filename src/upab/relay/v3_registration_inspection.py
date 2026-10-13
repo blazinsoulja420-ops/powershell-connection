@@ -25,6 +25,21 @@ MAX_ATTESTATION_BYTES = 8192
 MAX_CLIENT_BYTES = 2048
 MAX_CREDENTIAL_ID_BYTES = 1024
 
+# NIST P-256 field and curve coefficients. Candidate key validation only;
+# not proof of authenticator/owner enrollment or attestation trust.
+_P256_P = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+_P256_B = 0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
+
+
+def _validate_p256_public_point(x: bytes, y: bytes) -> None:
+    if type(x) is not bytes or type(y) is not bytes or len(x) != 32 or len(y) != 32:
+        raise PolicyBlocked("invalid P-256 coordinates")
+    px, py = int.from_bytes(x, "big"), int.from_bytes(y, "big")
+    if px >= _P256_P or py >= _P256_P:
+        raise PolicyBlocked("P-256 field coordinate out of range")
+    if pow(py, 2, _P256_P) != (pow(px, 3, _P256_P) - 3*px + _P256_B) % _P256_P:
+        raise PolicyBlocked("credential P-256 point not on curve")
+
 
 class _CBOR:
     """Strict small definite-length CBOR subset for a WebAuthn candidate.
@@ -211,8 +226,8 @@ def inspect_registration_candidate(
             or type(cose[-2]) is not bytes or len(cose[-2]) != 32
             or type(cose[-3]) is not bytes or len(cose[-3]) != 32):
         raise PolicyBlocked("unsupported COSE ES256/P-256 registration key")
-    # This parser does not prove the EC coordinates are on the P-256 curve,
-    # and does not accept any attestation metadata as a trust anchor.
+    # Validate the public point, but no attestation trust is implied.
+    _validate_p256_public_point(cose[-2], cose[-3])
     public_key_hash = hashlib.sha256(
         b"upab-web-authn-p256-v1\0" + cose[-2] + cose[-3]
     ).hexdigest()
