@@ -167,6 +167,17 @@ class Stage15RegistrationInspectionTests(unittest.TestCase):
                 with self.assertRaises(PolicyBlocked):
                     inspect(attestation=att_obj(auth=auth_data(key=mutated)))
 
+    def test_candidate_p256_point_must_be_on_curve(self):
+        with self.assertRaises(PolicyBlocked):
+            inspect(attestation=att_obj(auth=auth_data(
+                key={1:2, 3:-7, -1:1, -2:b"\x00"*32, -3:Y}
+            )))
+        with self.assertRaises(PolicyBlocked):
+            inspect(attestation=att_obj(auth=auth_data(
+                key={1:2, 3:-7, -1:1, -2:X, -3:b"\x00"*32}
+            )))
+        self.assertEqual(inspect()["key_algorithm"], "ES256")
+
     def test_credential_length_and_trailing_data_refused(self):
         for credential in (b"", b"x"*1025):
             with self.assertRaises(PolicyBlocked):
