@@ -90,6 +90,13 @@ def _clean_name(raw: str) -> str:
     return value[:120]
 
 
+def _reviewable_name(raw: str) -> str | None:
+    try:
+        return _clean_name(raw)
+    except IntakeError:
+        return None
+
+
 def _guess_idea_name(details: str) -> str:
     details = details.strip()
     named = re.search(r"\b(?:called|named)\s+(.+)$", details, re.IGNORECASE)
@@ -139,14 +146,14 @@ def classify_request(request: str, registry: ProjectRegistry) -> dict[str, Any]:
         if explicit:
             mode = "explicit"
             if explicit.group(1):
-                candidate_name = _clean_name(explicit.group(1))
+                candidate_name = _reviewable_name(explicit.group(1))
         else:
             idea = _IDEA.fullmatch(normalized)
             if idea is None:
                 idea = _IDEA.fullmatch(_TRAILING.sub("", normalized))
             if idea and idea.group(1):
                 mode = "idea"
-                candidate_name = _guess_idea_name(idea.group(1))
+                candidate_name = _reviewable_name(_guess_idea_name(idea.group(1))) if _reviewable_name(idea.group(1)) is not None else None
 
     slug: str | None = None
     needs_name = False
