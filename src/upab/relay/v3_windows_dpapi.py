@@ -25,8 +25,8 @@ class DATA_BLOB(ctypes.Structure):
     ]
 
 
-def _blob(data: bytes):
-    if not isinstance(data, bytes) or not 1 <= len(data) <= 65536:
+def _blob(data: bytes, *, max_bytes: int = 65536):
+    if not isinstance(data, bytes) or not 1 <= len(data) <= max_bytes:
         raise PolicyBlocked("DPAPI input must be bounded bytes")
     buffer = ctypes.create_string_buffer(data, len(data))
     return DATA_BLOB(len(data), ctypes.cast(buffer, ctypes.POINTER(ctypes.c_ubyte))), buffer
@@ -77,7 +77,7 @@ def protect_for_current_user(plaintext: bytes) -> bytes:
 
 def unprotect_for_current_user(ciphertext: bytes) -> bytes:
     """Decrypt bounded ciphertext using the original user-bound DPAPI context."""
-    input_blob, input_keepalive = _blob(ciphertext)
+    input_blob, input_keepalive = _blob(ciphertext, max_bytes=131072)
     entropy_blob, entropy_keepalive = _blob(_ENTROPY)
     crypt, kernel = _api()
     decrypted = DATA_BLOB()
