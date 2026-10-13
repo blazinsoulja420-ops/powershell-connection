@@ -75,6 +75,26 @@ verify all old processes, lock out old launch paths, take a protected backup,
 rotate nonce state, test rollback and independently verify authorization.
 Do not manually create the marker as a substitute for those steps.
 
+## Stage 5 — scoped proof verification and migration inventory (candidate)
+
+New non-executing module: src/upab/relay/v3_approval_preview.py.
+It checks exact-schema, time-limited HMAC proof metadata including task digest,
+repository, channel, pinned Git HEAD, read-only scope and one-time nonce.
+An atomic SQLite transaction denies reuse of the proof nonce or task ID.
+Output always has authenticated_owner=false and execution_authorized=false.
+An HMAC alone does NOT establish the human owner's identity. Protected
+secret custody, independent owner verification and trusted live bindings
+are requirements for a future approval broker, NOT implemented here.
+
+New read-only tool: src/upab/relay/v3_migration_inventory.py.
+It inventories existing legacy nonce, ledger records and migration markers.
+It NEVER creates files, stops processes, activates the watcher, or grants
+migration permission. State files cannot prove the legacy process is stopped.
+
+No integration with the existing task executor, GitHub, Universal AI, UASN,
+ResearchOS or Ollama was added. Production migration and security review
+remain blocked.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
