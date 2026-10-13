@@ -68,6 +68,17 @@ def evaluate_readiness(
                 or migration_inventory["authorized_to_migrate"] is not False
                 or migration_inventory["changes_performed"] is not False):
             raise PolicyBlocked("inventory claims unsupported migration authority")
+        if migration_inventory["status"] not in {
+            "V1_INVENTORIED_NOT_READY", "V2_STATE_PRESENT_REVIEW",
+            "MIGRATION_MARKER_PRESENT_STOP"
+        }:
+            raise PolicyBlocked("unexpected inventory status")
+        for field in ("legacy_nonce_present", "v2_database_present"):
+            if type(migration_inventory[field]) is not bool:
+                raise PolicyBlocked("invalid inventory boolean field")
+        count = migration_inventory["legacy_records"]
+        if count is not None and (type(count) is not int or count < 0 or count > 1000000):
+            raise PolicyBlocked("invalid legacy record count")
         migration_state = migration_inventory["status"]
         blockers.append("MIGRATION_INVENTORY_IS_NOT_PROCESS_QUIESCENCE_PROOF")
     return {
