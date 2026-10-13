@@ -11,6 +11,7 @@ from contextlib import closing
 from datetime import datetime, timedelta, timezone
 import hashlib
 from pathlib import Path
+import tempfile
 import secrets
 import sqlite3
 import stat
@@ -47,6 +48,8 @@ class IsolatedApprovalLab:
         self.root = user_path.resolve(strict=True)
         if not self.root.name.startswith("upab-v3-lab-"):
             raise PolicyBlocked("approval lab root changed on canonicalization")
+        if self.root.parent != Path(tempfile.gettempdir()).resolve():
+            raise PolicyBlocked("approval lab must be direct child of OS temporary directory")
         relay = self.root / "relay"
         for path in (relay, relay / "approval_lab.sqlite3"):
             try:
