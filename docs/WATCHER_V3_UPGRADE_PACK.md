@@ -305,6 +305,46 @@ one-time review/execution approval from an isolated protected broker.
 No assertion in this candidate can grant authority to run a user task.
 Preserve all twelve upgrade flags disabled and all repositories disconnected.
 
+## Stage 13 — durable synthetic WebAuthn challenge and credential journal
+
+New \`src/upab/relay/v3_synthetic_assertion_journal.py\` implements an
+isolated SQLite **LAB ONLY** ledger for WebAuthn replay/recovery experiments:
+
+- State can be created only inside an existing, disposable
+  \`upab-v3-lab-*\` folder directly beneath the OS temporary directory.
+  Existing reparse/symlink and unexpected file types are rejected.
+  No live state directory or external project path is opened.
+- A fixed **public test** P-256 credential record contains X/Y coordinates,
+  fixture relying party, origin, a persisted counter and
+  \`trusted=0\` enforced by a SQL CHECK. No private key or real user enrollment
+  is available. Arbitrary caller-supplied public-key enrollment is disallowed.
+- Issuance generates a fresh 32-byte random nonce by default, binding it
+  in SQLite to project ID, task ID, SHA-256 digest, scope and a 90-second
+  expiry. Only nonce hashes are retained. For deterministic CI, one
+  explicitly named synthetic mode can issue the static PUBLIC fixture nonce
+  corresponding to the previously verified public test signature.
+- The verifier claims a nonce in an immediate SQLite transaction *before*
+  cryptography. A second requester cannot reuse it. Successful synthetic
+  ES256 validation atomically advances the stored counter and sets
+  \`CRYPTO_VERIFIED_ONLY\`; invalid crypto moves the claim to \`REJECTED\`.
+  An interrupted \`CLAIMED\` record is never retried automatically: an
+  exclusive recovery pass marks it \`INTERRUPTED\`.
+- A bounded queue (8 active pending/claimed entries), state restart,
+  expiry, malformed inputs, forged task context and concurrent claims have
+  regression tests in \`tests/test_v3_synthetic_assertion_journal.py\`.
+- All responses state \`trusted_enrollment=false\`,
+  \`owner_authenticated=false\`, \`execution_authorized=false\` and no real
+  task execution. The public test key is **not** your owner's credential.
+
+Still required before any real approval: secure owner-controlled credential
+registration and proof of user consent, trusted RP/origin configuration,
+protection of the stored credential ID and public key from tampering,
+a crash-safe trusted counter policy including zero-counter authenticators,
+Windows Hello interactive assertion, authenticated peer context and binding
+to the exact allowed real task, single-use protected authorization issuance,
+safe legacy-watcher migration and same-laptop acceptance. This prototype
+does NOT authenticate a human or activate task execution.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
