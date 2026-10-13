@@ -11,6 +11,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
+import stat
 import sqlite3
 
 from .single_flight_v2 import SingleFlightLock
@@ -28,6 +29,26 @@ def _now() -> str:
 class SyntheticSingleWorker:
     """Persistent at-most-once fixture transitions (not real-world exactly once)."""
 
+    @staticmethod
+    def _refuse_redirected_path(path: Path, *, directory: bool = False) -> None:
+        """Reject preexisting symlinks/reparse points before a disposable write.
+
+        This is defense-in-depth for the synthetic fixture, NOT a secure
+        production open-by-handle or Windows DACL verification.
+        """
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, "st_file_attributes", 0) & 0x400
+        ):
+            raise PolicyBlocked("fixture state path has a reparse point")
+        if directory and not stat.S_ISDIR(info.st_mode):
+            raise PolicyBlocked("fixture relay path is not a directory")
+        if not directory and not stat.S_ISREG(info.st_mode):
+            raise PolicyBlocked("fixture database/lock path is not a file")
+
     def __init__(self, root: str | Path):
         supplied = Path(root).expanduser()
         if (not supplied.name.startswith("upab-v3-lab-") or supplied.is_symlink()
@@ -38,8 +59,13 @@ class SyntheticSingleWorker:
             raise PolicyBlocked("worker root changed on canonicalization")
         # Database creation happens only on a disposable fixture root.
         self.path = self.root / "relay" / "synthetic_worker.sqlite3"
+        self._refuse_redirected_path(self.path.parent, directory=True)
+        self._refuse_redirected_path(self.path.parent / "watcher_v2.lock")
+        self._refuse_redirected_path(self.path)
         with SingleFlightLock(self.root):
+            self._refuse_redirected_path(self.path.parent, directory=True)
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._refuse_redirected_path(self.path)
             with closing(self._db()) as db:
                 db.execute(
                     "CREATE TABLE IF NOT EXISTS fixture "
@@ -98,7 +124,9 @@ class SyntheticSingleWorker:
     def run(self, *, inject_interruption: bool = False) -> dict[str, object]:
         if type(inject_interruption) is not bool:
             raise PolicyBlocked("invalid test-only fault injection")
+        self._refuse_redirected_path(self.path)
         with SingleFlightLock(self.root):
+            self._refuse_redirected_path(self.path)
             current = self.status()
             if current["state"] != "PENDING":
                 raise PolicyBlocked("fixture not pending; no replay allowed")
@@ -120,6 +148,8 @@ class SyntheticSingleWorker:
 
     def reconcile(self) -> dict[str, object]:
         """No automatic repeat after an uncertain RUNNING checkpoint."""
+        self._refuse_redirected_path(self.path)
         with SingleFlightLock(self.root):
+            self._refuse_redirected_path(self.path)
             self._transition("RUNNING", "INTERRUPTED")
             return self.status()
