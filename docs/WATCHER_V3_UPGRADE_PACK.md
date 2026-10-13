@@ -203,6 +203,40 @@ owner-authentication design without weakening the real approval boundary.
 Do not interpret successful DPAPI decryption, presence of a Windows SID,
 a synthetically approved challenge or valid JSON as human authorization.
 
+## Stage 10 — authenticated local IPC **peer** only (not user presence)
+
+New `src/upab/relay/v3_pipe_server_preview.py` creates a one-connection,
+non-persistent, current-user Windows named pipe for native acceptance tests.
+It uses FILE_FLAG_FIRST_PIPE_INSTANCE (fail if a matching instance exists),
+PIPE_REJECT_REMOTE_CLIENTS, a protected DACL for the current account only,
+bounded overlapped connection/read/write waits, and a 4 KiB message bound.
+After receiving a message, the server impersonates the actual pipe client,
+verifies the token user SID matches the server, checks the kernel-reported
+client session and minimum medium integrity level, then always RevertToSelf.
+No untrusted token, SID, PID or raw task content is put in responses/logs.
+
+Valid requests remain `status` and `review_preview` only. All replies
+state owner_authenticated=false, presence_verified=false,
+execution_authorized=false, approval_issued=false. The transport may
+report transport_peer_verified=true, which is only OS account/session
+evidence, NOT a fresh verification of a human owner.
+
+Native Windows integration tests cover a same-user status request,
+denial-only review preview, rejected arbitrary execute request, oversize
+frame denial and an unconnected server timeout. The listener is launched
+only by explicitly invoking the test object's serve_once method; there is
+no startup hook, CLI service, installer, background daemon, or production
+execution adapter. Its ephemeral creation during CI does NOT deploy it
+to the user's laptop.
+
+**Release blockers:** independent Windows Hello/WebAuthn user verification
+with proof-bound challenge, persistent broker lifecycle/stop semantics,
+complete named-pipe security review including overlapped cancellation,
+broker credential custody and ACL/handle hardening, rate limits and
+denial-of-service handling, authenticated task/repository source identity,
+legacy watcher lockout/migration, approved executor integration, rollback
+and same-device Windows acceptance. CI cannot establish owner consent.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
