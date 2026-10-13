@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import ipaddress
 import json
 import re
 import sys
@@ -40,6 +41,12 @@ def validate_rp_candidate(*, rp_id: str, origin: str) -> dict[str, object]:
             or any(rp_id == suffix[1:] or rp_id.endswith(suffix)
                    for suffix in _RESERVED_SUFFIXES)):
         raise PolicyBlocked("RP ID is invalid or reserved for testing")
+    try:
+        ipaddress.ip_address(rp_id)
+    except ValueError:
+        pass
+    else:
+        raise PolicyBlocked("literal IP address cannot be a trusted RP domain")
     if type(origin) is not str or origin != "https://" + rp_id:
         raise PolicyBlocked("only exact HTTPS RP origin is accepted")
     try:
