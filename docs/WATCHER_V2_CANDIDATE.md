@@ -13,6 +13,36 @@ The existing `src/upab/relay/ledger.py`, `watcher.py`, CLI commands, launcher, a
 - Tests cover restart durability, legacy import, stale nonce, thread/process races, and aborted transactions.
 - The v2 ledger is not invoked by v1 `relay-watch` or `relay-run`. Creating it alone does not change deployed behavior.
 
+
+## Stage 2 — Event-driven Windows observation (added; STILL NON-EXECUTING)
+
+New additive modules:
+- src/upab/relay/clipboard_events_v2.py: invisible Win32 message-only
+  window + AddClipboardFormatListener, event wake-ups instead of constant
+  500 ms clipboard reads. Processes only the latest clipboard state; multiple
+  notifications are coalesced (no unbounded copy buffer).
+- src/upab/relay/clipboard_limited_v2.py: checks Windows GlobalSize of
+  clipboard CF_UNICODETEXT handle before decoding, default cap 131,072 chars.
+- tests/test_clipboard_events_v2.py: startup snapshot suppression,
+  same-content notification deduplication, transient clipboard read retry
+  (max 3), oversized inputs, and no implicit execution.
+
+Candidate dry-run on a Windows interactive desktop, NOT a service:
+
+    $env:PYTHONPATH = ".\src"
+    python -m upab.relay.clipboard_events_v2 --once
+
+Only observes clipboard format updates and prints sanitized event categories.
+The observer does not parse/validate task JSON, create a task queue, execute
+an operation, inspect a repository, modify clipboard content, or consume a
+relay nonce. Its named mutex protects just this candidate observer: it does
+NOT lock out an existing v1 relay-watch process.
+
+**Stage 2 is not an executable Watcher v2.** Do not install startup services
+or infer desktop integration from Windows CI alone. The Win32 event window
+still needs same-machine interactive-desktop validation, clipboard open/read
+fault tests, and before/after idle CPU and event latency measurements.
+
 ## Critical activation constraint
 
 **Never allow v1 and v2 to operate against the same state directory at the same time.** v1 reads and writes `nonce.txt` and `seen_tasks.jsonl` without a cross-process SQLite lock. v2 uses a different authoritative store. Concurrent operation or rolling back to v1 with old state risks replay or nonce divergence.
@@ -21,7 +51,7 @@ For future activation: stop all v1 processes, back up the private state director
 
 ## Missing for a deployable Watcher v2
 
-- Windows event-driven clipboard listener with startup snapshot suppression.
+- Windows event-driven clipboard listener/startup suppression are now passive candidate components; real laptop acceptance NOT yet verified.
 - Guaranteed process exclusivity (same repository + channel + state).
 - Bounded single-worker execution and backpressure; no concurrent task execution.
 - Clipboard retry/recovery, timeout watchdog without unsafe worker termination.
