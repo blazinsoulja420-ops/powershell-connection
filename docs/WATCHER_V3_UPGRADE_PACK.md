@@ -825,6 +825,57 @@ inventory of all installed launchers, protected shutdown and restart
 prevention, independent security review, rollback backup and authentic
 Windows Hello owner approval before any live activation.
 
+## Stage 26 — explicit checkout source fingerprint, local baseline (READ ONLY)
+
+- `src/upab/relay/v3_installation_baseline.py` hashes exactly six
+  known, versioned development artifacts: three old launcher scripts,
+  v1/v2 ledger Python modules and the disabled v3 example feature
+  catalog. This is a selected CHECKOUT preview, not actual installer
+  detection, runtime examination, package signature verification or
+  a release-chain attestation.
+- Requires an explicitly supplied, already-existing absolute checkout
+  path; guards ancestor/file reparse indicators, enforces per-file
+  size limits and verifies size/metadata did not change during reading.
+  It NEVER reads private `config/local.json`, state nonce, replay JSONL,
+  personal workspace content or arbitrary subfolders.
+- The canonical aggregate SHA-256 is a comparison fingerprint ONLY;
+  an optional externally supplied pin is validated and compared, but
+  neither matching values nor filenames authenticate GitHub origin,
+  owner approval, old-process shutdown, real installation or migration.
+  Result ALWAYS reports `safe_to_install=false`,
+  `safe_to_migrate=false`, `task_execution_authorized=false`, and
+  `files_changed=false`.
+- The disabled catalog must show exactly 12 known candidate upgrades
+  with zero activated, exactly 64 registered project slots and a
+  32 monitored-folder limit. Unexpected stage labels, unknown feature
+  IDs or changes to these limits fail closed.
+- Windows CI tests cover six-file fixture integrity, original byte
+  preservation, expected fingerprint match/mismatch, changed source
+  detection, added feature activation, schema drift, redirected/oversize
+  files, invalid input and a non-authorizing command-line preview.
+
+From a reviewed checkout in Windows PowerShell, the read-only command
+requires an explicitly selected existing checkout root:
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_installation_baseline --checkout 'C:\EXISTING\REVIEWED\CHECKOUT'
+
+**Real laptop evidence (narrow non-recursive, read-only scope):**
+the independently verified `UASN-Local-AI-Watchdog` scheduled task was
+still **Disabled / Not running**. An exact-name directory check across
+three common desktop/document roots found one candidate folder by name.
+None of the six expected repository artifacts was present at its
+immediate expected relative paths. This DOES NOT prove a watcher
+installation exists there or anywhere else; the real binary/checkout
+location and installed version remain **UNKNOWN**. No installed source
+was executed, modified, installed, deleted, migrated or deactivated.
+
+Before live installation, explicitly locate the real installed watcher
+via owner-reviewed local software inventory, verify signed source/release
+identity, every old launch mechanism, old process quiescence, protected
+backup with rollback, interactive Windows Hello owner authentication
+and independently approved task-execution governance.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
