@@ -202,7 +202,9 @@ class Stage34PortfolioHealthReviewTests(unittest.TestCase):
         for observations in (None,{},[None],["anything"],""):
             with self.subTest(observations=observations):
                 with self.assertRaises(PolicyBlocked):
-                    self.report(observations)
+                    review_health_rollup(portfolio=portfolio(),
+                                         observations=observations,
+                                         now_epoch_s=NOW)
         bad=portfolio()
         bad["projects"][0]["monitor_enabled"]=True
         with self.assertRaises(PolicyBlocked):
