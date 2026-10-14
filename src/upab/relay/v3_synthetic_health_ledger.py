@@ -38,26 +38,48 @@ class FakeMonotonicWitness:
         self._lock = threading.Lock()
         self._identity = None
         self._epoch = 0
+        self._commitment = None
         self.fail_next_advance = False
 
     def snapshot(self):
         with self._lock:
             return self._identity, self._epoch
 
-    def bind_new_fixture(self, identity):
+    def commitment_snapshot(self):
+        """A fake process-memory digest, NOT a protected hardware commitment."""
+        with self._lock:
+            return self._identity, self._epoch, self._commitment
+
+    def bind_new_fixture(self, identity, commitment):
+        if type(commitment) is not str or not HEX64.fullmatch(commitment):
+            raise PolicyBlocked("synthetic commitment malformed")
         with self._lock:
             if self._identity is not None or self._epoch:
                 raise PolicyBlocked("synthetic witness already bound")
             self._identity = identity
+            self._commitment = commitment
 
-    def advance(self, *, identity, expected_epoch):
+    def reseal_test_fixture(self, *, identity, expected_commitment, next_commitment):
+        """Insecure test-only fixture mutation; NEVER real key enrollment or revocation."""
+        if type(next_commitment) is not str or not HEX64.fullmatch(next_commitment):
+            raise PolicyBlocked("synthetic fixture commitment malformed")
+        with self._lock:
+            if self._identity != identity or self._commitment != expected_commitment:
+                raise PolicyBlocked("synthetic fixture commitment conflict")
+            self._commitment = next_commitment
+
+    def advance(self, *, identity, expected_epoch, next_commitment):
+        if type(next_commitment) is not str or not HEX64.fullmatch(next_commitment):
+            raise PolicyBlocked("synthetic next commitment malformed")
         with self._lock:
             if self.fail_next_advance:
                 self.fail_next_advance = False
                 raise PolicyBlocked("synthetic witness advance failed")
-            if self._identity != identity or self._epoch != expected_epoch:
+            if (self._identity != identity or self._epoch != expected_epoch
+                    or self._commitment is None):
                 raise PolicyBlocked("synthetic witness mismatch")
             self._epoch += 1
+            self._commitment = next_commitment
             return self._epoch
 
 
@@ -144,7 +166,8 @@ class SyntheticHealthLedger:
                         raise PolicyBlocked("ledger missing but fake witness already bound")
                     identity = uuid.uuid4().hex
                     db.execute("INSERT INTO meta VALUES(1,?,0,'READY')", (identity,))
-                    self.witness.bind_new_fixture(identity)
+                    self.witness.bind_new_fixture(
+                        identity, self._state_commitment(db))
                     row = (identity, 0, "READY")
                 db.execute("COMMIT")
             except BaseException:
@@ -179,10 +202,49 @@ class SyntheticHealthLedger:
             raise PolicyBlocked("ledger metadata missing")
         return row
 
+    def _state_commitment(self, db, *, pending_target=None):
+        """Canonical READY state; the fake external memory is still untrusted."""
+        identity, epoch, _ = self._meta(db)
+        collectors = db.execute(
+            "SELECT scope,enrollment_id,fingerprint,source_kind,state,"
+            "valid_from,valid_until FROM collectors ORDER BY scope").fetchall()
+        sequences = db.execute(
+            "SELECT scope,last_sequence,last_when,commit_epoch,digest "
+            "FROM sequences ORDER BY scope").fetchall()
+        if len(collectors) > MAX_OBSERVATIONS or len(sequences) > MAX_OBSERVATIONS:
+            raise PolicyBlocked("synthetic ledger exceeds fixed scope capacity")
+        if pending_target is not None:
+            scope, seq, when, next_epoch, new_digest = pending_target
+            replacements = 0
+            transformed = []
+            for record in sequences:
+                if record[0] == scope:
+                    transformed.append((scope, seq, when, next_epoch, new_digest))
+                    replacements += 1
+                else:
+                    transformed.append(record)
+            if replacements != 1 or next_epoch != epoch + 1:
+                raise PolicyBlocked("synthetic pending scope cannot be committed")
+            sequences = transformed
+            epoch = next_epoch
+        data = {"domain": "UPAB-WATCHER-V3-STATE-COMMITMENT-REVIEW-ONLY-v1",
+                "ledger_id": identity, "epoch": epoch,
+                "collectors": collectors, "sequences": sequences}
+        try:
+            payload = json.dumps(data, sort_keys=True, separators=(",", ":"),
+                                 ensure_ascii=True, allow_nan=False).encode("ascii")
+        except (ValueError, TypeError, UnicodeError) as exc:
+            raise PolicyBlocked("synthetic committed state malformed") from exc
+        if len(payload) > 32768:
+            raise PolicyBlocked("synthetic committed state too large")
+        return hashlib.sha256(payload).hexdigest()
+
     def _ready(self, db):
         identity, epoch, phase = self._meta(db)
-        if (self.witness.snapshot() != (identity, epoch) or phase != "READY"
-                or db.execute("SELECT count(*) FROM pending").fetchone()[0] != 0):
+        if (phase != "READY"
+                or db.execute("SELECT count(*) FROM pending").fetchone()[0] != 0
+                or self.witness.commitment_snapshot()
+                    != (identity, epoch, self._state_commitment(db))):
             raise PolicyBlocked("ledger needs recovery or is quarantined")
         return identity, epoch
 
@@ -209,7 +271,8 @@ class SyntheticHealthLedger:
         with closing(self._db()) as db:
             db.execute("BEGIN IMMEDIATE")
             try:
-                _, epoch = self._ready(db)
+                identity, epoch = self._ready(db)
+                previous_commitment = self.witness.commitment_snapshot()[2]
                 if (epoch != 0 or db.execute("SELECT count(*) FROM collectors").fetchone()[0]
                         >= MAX_OBSERVATIONS):
                     raise PolicyBlocked("cannot seed synthetic fixture after activity")
@@ -219,10 +282,14 @@ class SyntheticHealthLedger:
                 db.execute("INSERT INTO sequences VALUES (?,?,?,?,?)",
                            (scope, initial_sequence, initial_when, 0,
                             self._digest(scope, initial_sequence, initial_when, 0)))
+                next_commitment = self._state_commitment(db)
                 db.execute("COMMIT")
             except BaseException:
                 db.execute("ROLLBACK")
                 raise
+        self.witness.reseal_test_fixture(
+            identity=identity, expected_commitment=previous_commitment,
+            next_commitment=next_commitment)
         return _receipt("SYNTHETIC_FIXTURE_ONLY_NOT_OWNER_ENROLLED")
 
     def revoke_fixture(self, *, repository, module_id):
@@ -230,14 +297,19 @@ class SyntheticHealthLedger:
         with closing(self._db()) as db:
             db.execute("BEGIN IMMEDIATE")
             try:
-                self._ready(db)
+                identity, _ = self._ready(db)
+                previous_commitment = self.witness.commitment_snapshot()[2]
                 if db.execute("UPDATE collectors SET state='REVOKED' WHERE scope=?",
                               (scope,)).rowcount != 1:
                     raise PolicyBlocked("synthetic scope absent")
+                next_commitment = self._state_commitment(db)
                 db.execute("COMMIT")
             except BaseException:
                 db.execute("ROLLBACK")
                 raise
+        self.witness.reseal_test_fixture(
+            identity=identity, expected_commitment=previous_commitment,
+            next_commitment=next_commitment)
         return _receipt("SYNTHETIC_REVOCATION_ONLY")
 
     def accept_fixture(self, *, portfolio, envelope, now_epoch_s,
@@ -281,7 +353,9 @@ class SyntheticHealthLedger:
                     db.execute("COMMIT")
                     return _receipt("QUARANTINED_SEQUENCE_GAP", quarantined=1)
                 new_digest = self._digest(scope, seq, when, epoch + 1)
-                db.execute("INSERT INTO pending VALUES(1,?,?,?,?,?,?)",
+                next_commitment = self._state_commitment(
+                    db, pending_target=(scope, seq, when, epoch + 1, new_digest))
+                db.execute("INSERT INTO pending VALUES(1,?,?,?,?,?,?)"
                            (scope, old_digest, new_digest, seq, when, epoch + 1))
                 db.execute("UPDATE meta SET phase='PENDING' WHERE id=1")
                 if interrupt_at == "before_prepare":
@@ -293,7 +367,9 @@ class SyntheticHealthLedger:
                 raise
         if interrupt_at == "after_prepare":
             raise SimulatedInterruption("after durable prepare")
-        self.witness.advance(identity=identity, expected_epoch=epoch)
+        self.witness.advance(
+            identity=identity, expected_epoch=epoch,
+            next_commitment=next_commitment)
         if interrupt_at == "after_anchor":
             raise SimulatedInterruption("after fake witness advanced")
         self._finalize_pending()
@@ -320,7 +396,11 @@ class SyntheticHealthLedger:
                         or seq != prior[0] + 1 or when < prior[1]
                         or next_epoch != epoch + 1
                         or new_digest != self._digest(scope, seq, when, next_epoch)
-                        or self.witness.snapshot() != (identity, next_epoch)):
+                        or self.witness.commitment_snapshot() != (
+                            identity, next_epoch,
+                            self._state_commitment(
+                                db, pending_target=(
+                                    scope, seq, when, next_epoch, new_digest)))):
                     raise PolicyBlocked("insufficient synthetic finalize proof")
                 if db.execute("UPDATE sequences SET last_sequence=?,last_when=?,"
                               "commit_epoch=?,digest=? WHERE scope=?",
@@ -341,10 +421,12 @@ class SyntheticHealthLedger:
                 db.execute("BEGIN IMMEDIATE")
                 try:
                     identity, epoch, phase = self._meta(db)
-                    anchor_id, anchor_epoch = self.witness.snapshot()
+                    anchor_id, anchor_epoch, anchor_digest = (
+                        self.witness.commitment_snapshot())
                     pending = db.execute("SELECT count(*) FROM pending").fetchone()[0]
                     if (phase == "READY" and pending == 0 and
-                            (identity, epoch) == (anchor_id, anchor_epoch)):
+                            (identity, epoch, self._state_commitment(db))
+                            == (anchor_id, anchor_epoch, anchor_digest)):
                         db.execute("COMMIT")
                         return _receipt("SYNTHETIC_LEDGER_READY_NOT_AUTHENTICATED")
                     if (phase == "PENDING" and pending == 1 and identity == anchor_id
