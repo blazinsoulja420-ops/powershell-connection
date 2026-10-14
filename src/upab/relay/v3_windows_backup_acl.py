@@ -69,11 +69,28 @@ def _regular_existing_file(path: str | Path) -> Path:
     return source
 
 
-def inspect_backup_file_acl(file: str | Path) -> dict[str, object]:
-    """Sample a file security descriptor, always deny live authorization."""
+def _existing_directory(path: str | Path) -> Path:
+    source = Path(path).expanduser()
+    if not source.is_absolute():
+        raise PolicyBlocked("backup ACL scan requires absolute directory path")
+    for component in [source] + list(source.parents):
+        try:
+            info = component.lstat()
+        except OSError as exc:
+            raise PolicyBlocked("backup directory path missing") from exc
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, "st_file_attributes", 0) & 0x400
+        ):
+            raise PolicyBlocked("backup directory path redirected")
+    if not stat.S_ISDIR(source.lstat().st_mode):
+        raise PolicyBlocked("backup ACL scan requires a directory")
+    return source
+
+
+def _inspect_existing_acl(path: Path) -> dict[str, object]:
+    """Sample file or directory DACL; no trust or authorization issued."""
     if sys.platform != "win32":
         raise PolicyBlocked("Windows ACL inspection requires Windows")
-    path = _regular_existing_file(file)
     adv = ctypes.WinDLL("advapi32", use_last_error=True)
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     ptr = ctypes.c_void_p
@@ -197,3 +214,19 @@ def inspect_backup_file_acl(file: str | Path) -> dict[str, object]:
         }
     finally:
         kernel.LocalFree(sd)
+
+
+def inspect_backup_file_acl(file: str | Path) -> dict[str, object]:
+    """READ-ONLY snapshot of a bounded, explicitly selected file."""
+    if sys.platform != "win32":
+        raise PolicyBlocked("Windows ACL inspection requires Windows")
+    return _inspect_existing_acl(_regular_existing_file(file))
+
+
+def inspect_backup_directory_acl(folder: str | Path) -> dict[str, object]:
+    """READ-ONLY snapshot of an explicitly selected existing directory."""
+    if sys.platform != "win32":
+        raise PolicyBlocked("Windows ACL inspection requires Windows")
+    report = _inspect_existing_acl(_existing_directory(folder))
+    return {**report, "observed_directory": True,
+            "directory_child_entries_checked": False}
