@@ -81,14 +81,24 @@ class MultiProjectRegistryTests(unittest.TestCase):
             {"DISABLED"},
         )
 
-    def test_example_config_matches_five_disabled_profiles(self):
+    def test_example_config_matches_nine_owner_selected_inactive_profiles(self):
         example = Path(__file__).resolve().parents[1] / "config" / "multi-projects.example.json"
         registry = ProjectRegistry.from_file(example)
         self.assertEqual(
             [p.id for p in registry.projects],
-            ["poindexter", "universal-ai", "uasn", "kali-linux", "researchos"],
+            ["poindexter", "universal-ai", "researchos", "uasn", "upab",
+             "digital-twin", "behavior-registry", "nsfw", "kali-linux"],
         )
+        self.assertEqual(len(registry.projects), 9)
         self.assertTrue(all(not p.watch_enabled for p in registry.projects))
+        self.assertTrue(all(p.root is None and p.state_directory is None
+                            for p in registry.projects))
+        self.assertTrue(all(p.preflight()["execution"] == "DISABLED"
+                            for p in registry.projects))
+        repos = {p.repository for p in registry.projects}
+        self.assertNotIn("blazinsoulja420-ops/online-store", repos)
+        self.assertIn("blazinsoulja420-ops/Kali-Linux-", repos)
+        self.assertIn("blazinsoulja420-ops/NSFW", repos)
 
     def test_unknown_field_or_execution_flag_fails_closed(self):
         raw = sample()
