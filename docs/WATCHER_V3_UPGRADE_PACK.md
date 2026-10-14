@@ -923,6 +923,60 @@ quiescence and protected rollback remains mandatory before a real
 migration. A folder or uninstall-entry absence must never grant
 permission to install or run a new watcher.
 
+## Stage 28 — bounded package metadata and installation discovery (READ ONLY)
+
+- `src/upab/relay/v3_python_distribution_inventory.py` inspects
+  **only the selected interpreter** for exact distribution metadata
+  `universal-powershell-agent-bridge`. It validates bounded version
+  syntax, declared distribution identity and whether `upab` maps to
+  `upab.cli:main`. It **never imports or executes the target package,**
+  invokes the CLI, accesses another Python environment or installs it.
+- Optionally compare with one explicitly selected existing absolute
+  checkout's bounded `pyproject.toml` package version and `upab`
+  entry-point declaration; check path/parent reparse indicators and
+  before/after file metadata. An unsigned matching version or entry
+  point remains UNTRUSTED and cannot establish an authentic installed
+  executable, a running process or the authority to deploy.
+- `scripts/Get-UPABWatcherInstallCandidates.ps1` performs an
+  explicit-opt-in **bounded** metadata-only scan of fixed common
+  user/Desktop/Documents/LocalAppData Programs roots and a shallow
+  set of subdirectories. It checks existence of three fixed source
+  markers (legacy launcher, ledger, pyproject) and emits only counts.
+  It does not enumerate entire drives, read arbitrary file contents,
+  follow reparse-point directory roots, invoke Git hooks or return
+  private paths. `-FixtureOnly` evaluates public synthetic inputs
+  and the default mode scans NOTHING.
+- New negative tests check no-request opt-out, missing distribution,
+  mismatched version, malicious or forged metadata, missing/oversized/
+  redirected pyproject files, no-authority outputs and PowerShell
+  fixture, default and conflicting-mode behavior.
+
+Candidate Windows PowerShell previews (no installation or execution):
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_python_distribution_inventory --inspect-python-env
+    .\scripts\Get-UPABWatcherInstallCandidates.ps1 -FixtureOnly
+
+Run `-InspectLocal` only for explicitly approved, read-only folder
+discovery. A matching source shape or distribution entry is NOT proof of
+package origin, activated service, old watcher shutdown or owner consent.
+
+**Laptop evidence:** Python `pip show` did not identify the declared
+distribution in the currently invoked Python environment. An earlier
+bounded common-root/Windows-uninstall registration search had likewise
+not identified an actual installed Watcher, and the only `UPAB`-named
+folder observed was empty. These negative checks do not exclude
+portable scripts, alternative Python installations, renamed source
+trees, differently named programs or other users. No installed
+Watcher version or authenticated location is established.
+
+**Release remains blocked.** Explicit owner-verified binary/checkout
+identification, protected source provenance, old launcher exclusion,
+live Windows Hello credential enrollment, rollback and approved
+limited-scope executor acceptance must precede any installation,
+migration or task execution. All twelve feature flags stay disabled,
+with exactly 64 registered project slots and 32 active monitors.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
