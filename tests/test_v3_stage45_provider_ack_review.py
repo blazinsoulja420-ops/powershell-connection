@@ -20,6 +20,7 @@ except ImportError:
     Ed25519PrivateKey = None
 
 NOW = 1_800_000_000
+_OMITTED = object()
 ID = "a" * 32
 REQ = "b" * 32
 BEFORE = "c" * 64
@@ -71,13 +72,13 @@ class Stage45ProviderAcknowledgementTests(unittest.TestCase):
             "signature_hex": key.sign(DOMAIN + canonical_provider_claim(claim)).hex(),
         }
 
-    def review(self, *, req=None, envelope=None, pin=None, seen=None, now=NOW):
+    def review(self, *, req=None, envelope=None, pin=None, seen=_OMITTED, now=NOW):
         req = request() if req is None else req
         return review_untrusted_provider_ack(
             request=req,
             envelope=self.envelope(req) if envelope is None else envelope,
             caller_selected_public_key_sha256=self.pin if pin is None else pin,
-            seen_ack_claim_sha256=[] if seen is None else seen,
+            seen_ack_claim_sha256=[] if seen is _OMITTED else seen,
             now_epoch_s=now,
         )
 
