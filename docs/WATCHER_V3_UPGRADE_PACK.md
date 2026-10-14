@@ -604,6 +604,47 @@ implementation, user/session-specific process exclusion, secure
 handle-based state checks, DACL/owner/access tests on every backup object,
 trusted owner approval, and real Windows laptop acceptance.
 
+## Stage 21 — OS service/task snapshots and bounded backup tree ACLs (REVIEW ONLY)
+
+- `src/upab/relay/v3_authoritative_launch_snapshot.py` uses native
+  Windows Service Control Manager EnumServicesStatusExW to enumerate
+  registered Win32 service names, display names and instantaneous state
+  inside a bounded buffer. Only aggregate possible-watcher hit counts
+  are returned; no service PIDs or names leave the process. SCM
+  enumeration is closer to the source of truth than registry keys, but
+  a snapshot still cannot prove old watcher processes or tasks stopped,
+  prevent an immediate subsequent launch or exhaust every launch path.
+- The same module invokes ONLY the Win32-resolved `schtasks.exe` binary
+  using a fixed `/Query /FO CSV /NH` argument vector, no shell and a
+  bounded timeout, and counts possible UPAB task *names* in memory.
+  Neither task actions nor credentials are returned. Scheduler access
+  failures, oversized/malformed data and missing API availability
+  block the evidence rather than granting clearance. This query is
+  an operating-system scheduled-task inventory, but the caller's access
+  and task-action coverage are still insufficient for live migration.
+- `src/upab/relay/v3_windows_backup_acl.py` now reuses its Win32 DACL
+  reader for existing directories as well as explicitly selected files,
+  with no ACL modifications.
+- `src/upab/relay/v3_backup_tree_acl_preview.py` examines only an
+  explicit narrow relay backup folder with expected v1 state files and
+  known optional v2 files. It refuses unknown or missing required files,
+  reparse points and unexpectedly large files. It samples DACLs for both
+  directories and each allowlisted file; returns only aggregate risky
+  broad-write, NULL DACL, inherited/unprotected and uninterpreted ACE
+  counts, not paths, SIDs, file contents or backup credentials.
+- Nothing in this stage proves effective ACL rights, immutable backup
+  provenance, race-free handle-based access, restoration correctness,
+  full launcher shutdown, trusted owner approval or real-task authority.
+  The tests use Windows runners and disposable public file fixtures;
+  the owner's Windows laptop was NOT enrolled, inspected or modified.
+
+All reported approvals, migration permission, production execution and
+system mutations remain **false**, irrespective of apparently clean
+service/task results or narrow DACLs. Release requires device-specific
+full access-controlled inventory, owner-authorized v1 process shutdown,
+protected backups + rollback, real Windows Hello verification and an
+independently reviewed locked-down executor.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
