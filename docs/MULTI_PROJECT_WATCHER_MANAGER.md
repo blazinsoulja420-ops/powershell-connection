@@ -1,10 +1,10 @@
-# UPAB Multi-Project Watcher Manager — five-project bootstrap
+# UPAB Multi-Project Watcher Manager — nine-project disabled proposal
 
 **Stage:** non-production candidate, registry and read-only binding preflight only.
 **Host repository:** blazinsoulja420-ops/powershell-connection.
 **Related but separate:** Watcher v2 atomic replay ledger draft PR #2.
 
-## Exact initial project profiles
+## Exact owner-selected project profiles (2026-10-14)
 
 | Profile ID | Approved GitHub repository |
 | --- | --- |
@@ -13,6 +13,12 @@
 | uasn | blazinsoulja420-ops/UASN-AI-Specialist |
 | kali-linux | blazinsoulja420-ops/Kali-Linux- |
 | researchos | blazinsoulja420-ops/UP-RES-001-Autonomous-Research-System |
+| upab | blazinsoulja420-ops/powershell-connection |
+| digital-twin | blazinsoulja420-ops/P-DT-001-Digital-Twin |
+| behavior-registry | blazinsoulja420-ops/Universal-AI-Behavior-Requirements-Registry |
+| nsfw | blazinsoulja420-ops/NSFW |
+
+These nine profiles are an inert proposed roster, **not nine live watchers**. `online-store` is explicitly excluded. The previously separate Poindexter 19 application categories remain modules in that single repository, not 19 extra profiles. The NSFW project remains independently restricted; the Kali Linux project remains offline defensive training only. Explicit local owner approval, private root binding and operational acceptance are prerequisites for any future monitoring. No cross-project connection is authorized.
 
 An existing GitHub repo **does not prove a matching laptop checkout**.
 The example intentionally has watch_enabled=false, execution_enabled=false,
@@ -25,7 +31,7 @@ From the UPAB repository checkout, with Python >=3.11:
     $env:PYTHONPATH = ".\src"
     python -m upab.multiwatch --config .\config\multi-projects.example.json
 
-Expected for unconfigured template: five NOT_ARMED, five DISABLED.
+Expected for unconfigured template: nine NOT_ARMED, nine DISABLED.
 This command parses the registry and performs read-only Git origin checks only
 for profiles manually configured with watch_enabled=true. It does not start a
 watcher, alter state, pull/commit Git changes, download models, or dispatch tasks.
