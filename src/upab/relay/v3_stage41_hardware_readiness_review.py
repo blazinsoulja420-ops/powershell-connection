@@ -40,7 +40,7 @@ def assess_untrusted_hardware_report(
     if (type(evidence) is not dict or set(evidence) != FIELDS
             or evidence.get("schema") != SCHEMA):
         raise PolicyBlocked("invalid untrusted hardware report structure")
-    if evidence["source_kind"] not in SOURCES or type(evidence["source_kind"]) is not str:
+    if type(evidence["source_kind"]) is not str or evidence["source_kind"] not in SOURCES:
         raise PolicyBlocked("unsupported untrusted report source")
     if type(evidence["platform"]) is not str or evidence["platform"] not in (
         "WINDOWS", "OTHER", "UNKNOWN"
