@@ -20,6 +20,15 @@
       "state_directory": null
     },
     {
+      "id": "researchos",
+      "repository": "blazinsoulja420-ops/UP-RES-001-Autonomous-Research-System",
+      "channel_id": "upab-researchos",
+      "watch_enabled": false,
+      "execution_enabled": false,
+      "local_root": null,
+      "state_directory": null
+    },
+    {
       "id": "uasn",
       "repository": "blazinsoulja420-ops/UASN-AI-Specialist",
       "channel_id": "upab-uasn",
@@ -29,18 +38,45 @@
       "state_directory": null
     },
     {
-      "id": "kali-linux",
-      "repository": "blazinsoulja420-ops/Kali-Linux-",
-      "channel_id": "upab-kali-linux",
+      "id": "upab",
+      "repository": "blazinsoulja420-ops/powershell-connection",
+      "channel_id": "upab-upab",
       "watch_enabled": false,
       "execution_enabled": false,
       "local_root": null,
       "state_directory": null
     },
     {
-      "id": "researchos",
-      "repository": "blazinsoulja420-ops/UP-RES-001-Autonomous-Research-System",
-      "channel_id": "upab-researchos",
+      "id": "digital-twin",
+      "repository": "blazinsoulja420-ops/P-DT-001-Digital-Twin",
+      "channel_id": "upab-digital-twin",
+      "watch_enabled": false,
+      "execution_enabled": false,
+      "local_root": null,
+      "state_directory": null
+    },
+    {
+      "id": "behavior-registry",
+      "repository": "blazinsoulja420-ops/Universal-AI-Behavior-Requirements-Registry",
+      "channel_id": "upab-behavior-registry",
+      "watch_enabled": false,
+      "execution_enabled": false,
+      "local_root": null,
+      "state_directory": null
+    },
+    {
+      "id": "nsfw",
+      "repository": "blazinsoulja420-ops/NSFW",
+      "channel_id": "upab-nsfw",
+      "watch_enabled": false,
+      "execution_enabled": false,
+      "local_root": null,
+      "state_directory": null
+    },
+    {
+      "id": "kali-linux",
+      "repository": "blazinsoulja420-ops/Kali-Linux-",
+      "channel_id": "upab-kali-linux",
       "watch_enabled": false,
       "execution_enabled": false,
       "local_root": null,
