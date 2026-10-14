@@ -645,6 +645,51 @@ full access-controlled inventory, owner-authorized v1 process shutdown,
 protected backups + rollback, real Windows Hello verification and an
 independently reviewed locked-down executor.
 
+## Stage 22 — consolidated read-only predeployment blockers
+
+- `src/upab/relay/v3_predeployment_gate.py` consolidates eight optional
+  security observation categories: process snapshot, SCM service scan,
+  Task Scheduler survey, registry startup entries, backup tree DACLs,
+  source/backup SHA-256 comparison, legacy replay history and the
+  Windows Hello capability preflight. It never establishes owner trust.
+- `evaluate_predeployment` accepts only known sanitized schema receipts
+  with explicitly denied authentication, shutdown, migration, system
+  mutation and execution flags. An observation which asserts any of
+  those authorities is rejected. Bare status placeholders can report
+  `BLOCKED`, never claim that a source is observed or approved.
+- Missing observations become `NOT_REQUESTED`, failed observations
+  become `BLOCKED`, and successfully read sources become
+  `OBSERVED_PARTIAL`. Even when all eight appear observed, the resulting
+  `status` is permanently `BLOCKED_NOT_DEPLOYABLE` and the tool returns
+  `safe_to_migrate=false`, `safe_to_install=false`,
+  `task_execution_authorized=false` and `changes_performed=false`.
+- The feature catalog must preserve all twelve disabled upgrade entries,
+  64 registered projects and 32 simultaneous folder monitors.
+- Optional Win32 collection must be explicitly requested with
+  `--collect-windows`; state and backup locations must be selected
+  explicitly and are never auto-discovered. Errors are sanitized to
+  a blocked status without exposing local paths or task material.
+  Windows Hello registration is never invoked by this tool.
+- A deterministic SHA-256 fingerprint identifies only the **UNTRUSTED**
+  sanitized report, not a signature, credential or approval proof.
+- Windows CI tests exercise omitted checks, eight synthetic inert
+  receipts, counterfeit authority claims, malformed receipts,
+  bounded feature invariants and blocked OS sampling.
+
+Windows PowerShell preview from this reviewed branch (no Windows scans):
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_predeployment_gate --features .\config\watcher-v3-features.example.json
+
+Explicit read-only Windows observation (not an owner approval):
+
+    python -m upab.relay.v3_predeployment_gate --features .\config\watcher-v3-features.example.json --collect-windows
+
+A zero command exit status means the **blocker report** was generated,
+NOT that deployment was approved. Device-specific enrollment, protected
+approval brokerage, old watcher exclusion, backup recovery and explicit
+owner authorization remain unresolved. No feature is activated.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
