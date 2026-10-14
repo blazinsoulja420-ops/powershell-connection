@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -134,11 +135,11 @@ class Stage38SyntheticLedgerTests(unittest.TestCase):
 
     def test_database_rollback_with_independent_fake_witness_detected(self):
         backup_path = Path(self.temp.name) / "snapshot.sqlite3"
-        with sqlite3.connect(self.ledger.path) as source, sqlite3.connect(backup_path) as dest:
+        with closing(sqlite3.connect(self.ledger.path)) as source, closing(sqlite3.connect(backup_path)) as dest:
             source.backup(dest)
         self.accept()
         self.assertEqual(self.anchor.snapshot()[1], 1)
-        with sqlite3.connect(backup_path) as source, sqlite3.connect(self.ledger.path) as dest:
+        with closing(sqlite3.connect(backup_path)) as source, closing(sqlite3.connect(self.ledger.path)) as dest:
             source.backup(dest)
         reopened = SyntheticHealthLedger(self.temp.name, witness=self.anchor)
         self.assertEqual(reopened.recover_fixture()["quarantined_count"], 1)
@@ -189,8 +190,9 @@ class Stage38SyntheticLedgerTests(unittest.TestCase):
     def test_wrong_pending_digest_recovery_fails_closed(self):
         with self.assertRaises(SimulatedInterruption):
             self.accept(interrupt_at="after_anchor")
-        with sqlite3.connect(self.ledger.path) as db:
+        with closing(sqlite3.connect(self.ledger.path)) as db:
             db.execute("UPDATE pending SET new_digest=? WHERE id=1", ("0"*64,))
+            db.commit()
         with self.assertRaises(PolicyBlocked):
             self.ledger.recover_fixture()
         with self.assertRaises(PolicyBlocked):
