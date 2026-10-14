@@ -1030,6 +1030,55 @@ No exact installed watcher location or authentic version has yet
 been located. No process, file, scheduler or feature setting was
 modified on the laptop.
 
+## Stage 30 — Ed25519 signed-release review boundary (NO OWNER ENROLLMENT)
+
+- `src/upab/relay/v3_signed_release_review.py` verifies a genuine
+  **Ed25519 signature** using the maintained, optional Python
+  `cryptography` library; it does **not** implement custom cryptographic
+  math. If the optional library is missing, verification fails CLOSED.
+- A fixed domain-separated message binds exactly the canonical Stage 29
+  source manifest. The signer-supplied public key must be raw 32-byte
+  lowercase hex, the signature 64-byte lowercase hex, and its separately
+  supplied SHA-256 public-key fingerprint must agree with that key.
+  The six selected source files, explicit commit text, manifest digest,
+  and disabled v3 feature catalog are checked before signature
+  verification. Forged publisher claims, malformed key/signature, wrong
+  key, altered source, changed commit and extra manifest fields BLOCK.
+- **Important distinction:** Ed25519 proves that the holder of the
+  private key associated with the SUPPLIED public key signed these
+  bytes. It does NOT prove that this public key belongs to the user,
+  GitHub, a trusted software publisher or an approved release. A caller
+  can manufacture a key, a matching fingerprint and a signature.
+- This candidate does NOT verify Git commit objects/signatures,
+  transparency logs, tag provenance, key custody, revocation, version
+  downgrade protection, installed runtime, Windows Hello or the owner.
+  Every report returns `trusted_owner_root_enrolled=false`,
+  `github_commit_signature_verified=false`, `safe_to_install=false`,
+  `safe_to_migrate=false`, `task_execution_authorized=false`,
+  and `files_or_settings_changed=false`.
+- Windows GitHub Actions installs `cryptography==46.0.3` **only in
+  ephemeral CI jobs** to run real synthetic Ed25519 tests. No extra
+  dependency is installed in the user's current laptop/runtime. The
+  runtime package manifest's default dependencies stay unchanged.
+  `tests/test_v3_signed_release_review.py` tests actual public/private
+  key signing, wrong keys, wrong domain, source corruption, malformed
+  signatures, missing cryptographic module and CLI redaction.
+
+Example from a reviewed candidate checkout with an EXISTING manifest
+and **separately trusted** key fingerprint (do not auto-generate owner
+trust just to make this verification pass):
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_signed_release_review --checkout 'C:\EXISTING\REVIEWED\CHECKOUT' --manifest 'C:\EXISTING\REVIEWED\MANIFEST.json' --manifest-sha256 '<64_LOWERCASE_HEX>' --expected-commit '<40_LOWERCASE_HEX>' --public-key-hex '<64_LOWERCASE_HEX>' --signature-hex '<128_LOWERCASE_HEX>' --public-key-sha256 '<64_LOWERCASE_HEX>'
+
+**Separate owner-trust ceremony still needed:** independently
+authenticate a publisher key on a trusted device/session, document
+protected key custody and replacement/revocation/anti-rollback policy,
+verify an actual signed Git release/commit and its bundle, complete
+Windows Hello enrollment and a task-scoped broker, and prove old
+watcher shutdown plus backup/rollback on the real laptop. Stage 30
+has NONE of those authorities and does not install/merge/activate.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
