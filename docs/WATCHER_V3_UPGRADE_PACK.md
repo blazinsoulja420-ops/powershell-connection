@@ -571,6 +571,39 @@ owner authorization. Real migration still requires process and launcher
 shutdown proofs, trusted Windows approval, protected backups, independent
 rollback testing and explicit owner permission on the actual laptop.
 
+## Stage 20 — read-only Windows service/task registration and backup ACL inspection
+
+- `src/upab/relay/v3_service_task_registry_preview.py` inspects bounded
+  HKLM Services registration subkeys plus ImagePath/DisplayName strings,
+  and Task Scheduler TaskCache Tree key *names*. It returns aggregate
+  counts of possible watcher references, never service commands, task
+  actions, user SIDs, full paths or PIDs. This is REGISTRY inspection,
+  not authoritative Service Control Manager enumeration or complete
+  Task Scheduler COM enumeration. If an entry is unreadable or the scan
+  is bounded, it stays incomplete. A zero hit count does NOT prove
+  startup launchers are disabled.
+- `src/upab/relay/v3_windows_backup_acl.py` observes a security descriptor
+  and DACL through native GetNamedSecurityInfoW, GetSecurityDescriptorDacl
+  and GetAce on one caller-selected existing file. It reports whether
+  a DACL exists, whether DACL inheritance is protected, limited ACE counts
+  and conservative broad-principal write ALLOW evidence. Raw SID, ACL
+  text, task payload, nonce, or file path are not returned.
+- A NULL or missing DACL is explicitly treated as a risky write-access
+  condition; unrecognized ACE types are counted rather than presumed safe.
+  Even an apparently restrictive DACL does not establish protective
+  custody, full directory permissions, inheritance correctness, race-free
+  open-by-handle checks, backup immutability or authenticated provenance.
+- Native CI tests exercise Win32 service/task registration observation,
+  real-file ACL reading, missing/redirected/oversized paths, limited
+  startup visibility and no modifications to systems or backup contents.
+
+**The actual laptop was NOT inspected** when these candidate tests ran.
+Do not promote this module to a live launcher-disable or migration gate
+without a protected, independently reviewed SCM + Task Scheduler API
+implementation, user/session-specific process exclusion, secure
+handle-based state checks, DACL/owner/access tests on every backup object,
+trusted owner approval, and real Windows laptop acceptance.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
