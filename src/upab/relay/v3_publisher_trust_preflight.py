@@ -10,8 +10,8 @@ import re
 
 from .v3_policy import PolicyBlocked
 
-_FINGERPRINT = re.compile(r"[0-9a-f]{64}\\Z")
-_COMMIT = re.compile(r"[0-9a-f]{40}\\Z")
+_FINGERPRINT = re.compile(r"[0-9a-f]{64}\Z")
+_COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 SCHEMA = "upab.watcher-v3.publisher-trust-preflight.v1"
 
 
