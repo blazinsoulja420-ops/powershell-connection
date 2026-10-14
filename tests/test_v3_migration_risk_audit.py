@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 import sqlite3
 import tempfile
 import unittest
@@ -69,8 +70,9 @@ class Stage17LegacyMigrationRiskAuditTests(unittest.TestCase):
             v1.consume("historic-01", "B"*64, v1.current_nonce())
             RelayLedgerV2(td)
             db = Path(td)/"relay"/"relay_v2.sqlite3"
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 conn.execute("DELETE FROM consumed WHERE task_id='historic-01'")
+                conn.commit()
             report = audit_migration_risks(td)
             self.assertEqual(report["missing_legacy_records_in_v2"], 1)
             self.assertIn("LEGACY_HISTORY_NOT_FULLY_IN_V2", report["blocked_reasons"])
