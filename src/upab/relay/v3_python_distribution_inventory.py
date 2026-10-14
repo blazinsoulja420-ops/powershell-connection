@@ -32,7 +32,7 @@ _VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.!+_-]{0,63}\Z")
 
 
 def _existing_pyproject(checkout: str | Path) -> Path:
-    if type(checkout) not in (str, Path):
+    if not isinstance(checkout, (str, Path)):
         raise PolicyBlocked("explicit root must be a path")
     root = Path(checkout).expanduser()
     if not root.is_absolute():
