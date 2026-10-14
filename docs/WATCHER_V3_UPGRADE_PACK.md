@@ -732,6 +732,49 @@ process/launcher shutdown, approved rollback and independently verified
 execution isolation remain mandatory and cannot be replaced with a
 CI-generated SHA-256 value or a checked checklist.
 
+## Stage 24 — Windows process/session evidence (READ ONLY)
+
+- `src/upab/relay/v3_process_session_evidence.py` uses a bounded
+  Toolhelp32 process snapshot plus read-only `OpenProcess` handles,
+  `GetProcessTimes` probes and `ProcessIdToSessionId` to observe the
+  Windows session distribution of exact, common host executable names
+  (Python, PowerShell and UPAB). It also compares the current inspection
+  session with `WTSGetActiveConsoleSessionId`. No PID, path, command
+  line, process creation timestamp, SID, credential or token is returned.
+- Inaccessible, exited or ambiguous candidate processes are counted
+  as unresolved, NOT proof of absence. Session equality or console
+  session presence is NOT physical human consent, Windows Hello
+  verification, or proof a watcher is quiescent. Renamed executables,
+  arbitrary generic host commands and new processes after the snapshot
+  remain outside the evidence boundary.
+- This module has NO process stop, service control, credential creation,
+  approval, repo connection, migration or task execution method. Its
+  result always reports `old_watcher_process_absence_proven=false`,
+  `owner_interactive_presence_proven=false`,
+  `owner_windows_hello_verified=false`,
+  `deployment_authorized=false` and `task_execution_authorized=false`.
+- Read-only Windows PowerShell preview from a reviewed candidate checkout:
+
+      $env:PYTHONPATH = '.\src'
+      python -m upab.relay.v3_process_session_evidence
+
+- Stage 24 includes Windows CI tests for native session observations,
+  invalid and oversized synthetic inputs, console/session mismatch,
+  zero-candidate non-proof, redaction and a one-shot CLI.
+- An isolated, native PowerShell process/session *observation* was
+  conducted on the connected owner laptop while online, without
+  changing the watcher or the device. It found ten generic candidate
+  Python/PowerShell/cmd/UPAB hosts in the inspector's session at that
+  moment; **no executable-level evidence uniquely identified v1**.
+  This does not establish complete session enumeration, legacy process
+  termination, old launch-path exclusion or owner authentication.
+
+Before release, independently inspect the exact installed v1 command
+identity and launcher ownership without exporting secrets, obtain
+interactive owner verification and verified old-runtime quiescence,
+then perform approved migration and rollback acceptance. Generic process
+counts must NEVER be used as permission to promote a release.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
