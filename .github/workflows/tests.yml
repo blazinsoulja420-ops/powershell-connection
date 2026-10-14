@@ -19,6 +19,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Stage 30: only the ephemeral Windows CI runner installs the optional
+      # maintained Ed25519 verification backend. Default watcher runtime deps
+      # remain unchanged; failure to load this module blocks release checks.
+      - name: Install optional signed-release test backend
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check "cryptography==46.0.3"
       - name: Run self-tests
         shell: pwsh
         run: .\scripts\test.ps1
