@@ -876,6 +876,53 @@ identity, every old launch mechanism, old process quiescence, protected
 backup with rollback, interactive Windows Hello owner authentication
 and independently approved task-execution governance.
 
+## Stage 27 — targeted read-only runtime-layout and installed-product discovery
+
+- `src/upab/relay/v3_runtime_layout_inventory.py` inventories only an
+  EXPLICIT pre-existing absolute candidate folder. It inspects a bounded
+  top-level entry count and fixed source marker file metadata at relative
+  paths. It does not open or hash private `local.json`, nonce, task
+  ledger, credentials, unknown workspace files, process command lines,
+  Git credentials or unrelated project repositories.
+- Empty directories are labeled `EMPTY_DIRECTORY_NOT_INSTALLATION`.
+  Missing/partial source markers are distinguished from a plausible
+  v1 source layout; v2/v3 markers are reported separately. Even all
+  expected filenames mean only `POSSIBLE_SOURCE_LAYOUT_NOT_AUTHENTICATED`.
+  Path symlinks/reparse indicators, unexpected file types, oversized
+  markers, excessive root entries and missing path components fail closed.
+- No output claims source authenticity, installed runtime identification,
+  execution, approval, old watcher shutdown, comprehensive discovery or
+  an authenticated owner. It never starts an executable, installs, writes,
+  disables tasks or changes feature settings.
+- `tests/test_v3_runtime_layout_inventory.py` tests empty, partial,
+  complete-looking and unrelated folders, unchanged bytes, symlinks,
+  bounds, invalid roots, CLI redaction and explicit false authority.
+
+Read-only preview from an owner-reviewed candidate checkout, selecting
+an EXISTING local folder without auto-discovery:
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_runtime_layout_inventory --candidate 'C:\EXISTING\SELECTED\FOLDER'
+
+**Owner laptop read-only inventory (partial, not proof of absence):**
+the earlier watcher-named folder is named `UPAB`, contained zero
+immediate entries, and had zero of eight expected watcher source
+markers. A separate bounded inspection sampled four common
+installation directory roots, 54 immediate subdirectories and three
+Windows uninstall registry views. It found zero exact watcher-named
+subdirectory candidates and zero matching registered product display
+names in those sampled views. The old/v3 watcher might still live under
+a different folder name, user account, portable script, unregistered
+package or non-enumerated path; **no installed runtime or version is
+verified**. The previously paused UASN scheduled watchdog remains
+Disabled/Not running per the separate earlier read-only verification.
+
+Independent trusted owner inspection of a SPECIFIC real installation
+path, signed release/source identity, active launch mechanism, legacy
+quiescence and protected rollback remains mandatory before a real
+migration. A folder or uninstall-entry absence must never grant
+permission to install or run a new watcher.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
