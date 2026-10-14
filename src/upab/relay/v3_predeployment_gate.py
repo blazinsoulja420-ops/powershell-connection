@@ -19,7 +19,7 @@ from pathlib import Path
 import sys
 from typing import Callable
 
-from .v3_features import load_feature_catalog
+from .v3_features import FEATURES, STAGES, load_feature_catalog
 from .v3_policy import PolicyBlocked
 
 _SCHEMA = "upab.watcher-v3.predeployment-evidence.v1"
@@ -129,7 +129,9 @@ def _feature_invariants(report: object) -> None:
         ):
             raise PolicyBlocked("feature activation or fixed capacity invariant broken")
     stages = report.get("stages")
-    if type(stages) is not dict or len(stages) != 12:
+    if (type(stages) is not dict or set(stages) != set(FEATURES)
+            or any(type(stage) is not str or stage not in STAGES
+                   for stage in stages.values())):
         raise PolicyBlocked("feature staging evidence malformed")
 
 
