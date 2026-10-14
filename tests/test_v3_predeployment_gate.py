@@ -105,6 +105,19 @@ class Stage22ReadOnlyPredeploymentGateTests(unittest.TestCase):
                 with self.assertRaises(PolicyBlocked):
                     evaluate_predeployment(feature_report=altered)
 
+    def test_stage_registry_names_and_labels_checked_even_for_inert_receipt(self):
+        wrong_names=deepcopy(self.features)
+        stages=wrong_names["stages"]
+        key=next(iter(stages))
+        stages["not-a-registered-upgrade"]=stages.pop(key)
+        with self.assertRaises(PolicyBlocked):
+            evaluate_predeployment(feature_report=wrong_names)
+        wrong_value=deepcopy(self.features)
+        key=next(iter(wrong_value["stages"]))
+        wrong_value["stages"][key]="activated"
+        with self.assertRaises(PolicyBlocked):
+            evaluate_predeployment(feature_report=wrong_value)
+
     def test_unknown_and_bare_positive_observation_states_denied(self):
         for entries in (
             {"unknown-surface":{"state":"BLOCKED"}},
