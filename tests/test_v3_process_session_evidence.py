@@ -99,6 +99,23 @@ class Stage24Win32SessionEvidenceTests(unittest.TestCase):
         import ctypes
         self.assertEqual(ctypes.sizeof(FILETIME),8)
 
+    def test_read_only_cli_refuses_unexpected_flags(self):
+        import contextlib
+        import io
+        from upab.relay.v3_process_session_evidence import main
+        stream=io.StringIO()
+        if sys.platform != "win32":
+            with contextlib.redirect_stderr(stream):
+                self.assertEqual(main([]), 7)
+            self.assertIn("WATCHER_V3_SESSION_PREFLIGHT_BLOCKED",stream.getvalue())
+            return
+        with contextlib.redirect_stdout(stream):
+            self.assertEqual(main([]), 0)
+        output=stream.getvalue()
+        self.assertIn('"deployment_authorized": false',output)
+        self.assertNotIn('"pids":',output)
+        self.assertNotIn('"command_lines":',output)
+
     def test_no_process_termination_or_owner_enrollment_api(self):
         import upab.relay.v3_process_session_evidence as m
         for forbidden in (
