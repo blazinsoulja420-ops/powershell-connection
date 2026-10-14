@@ -39,6 +39,7 @@ class FakeMonotonicWitness:
         self._identity = None
         self._epoch = 0
         self._commitment = None
+        self._quarantined = False
         self.fail_next_advance = False
 
     def snapshot(self):
@@ -49,6 +50,17 @@ class FakeMonotonicWitness:
         """A fake process-memory digest, NOT a protected hardware commitment."""
         with self._lock:
             return self._identity, self._epoch, self._commitment
+
+    def is_quarantined(self):
+        with self._lock:
+            return self._quarantined
+
+    def mark_quarantined(self, *, identity):
+        """Test-only nonpersistent latch, deliberately denying later reuse."""
+        with self._lock:
+            if self._identity != identity:
+                raise PolicyBlocked("synthetic quarantine witness identity mismatch")
+            self._quarantined = True
 
     def bind_new_fixture(self, identity, commitment):
         if type(commitment) is not str or not HEX64.fullmatch(commitment):
@@ -64,7 +76,8 @@ class FakeMonotonicWitness:
         if type(next_commitment) is not str or not HEX64.fullmatch(next_commitment):
             raise PolicyBlocked("synthetic fixture commitment malformed")
         with self._lock:
-            if self._identity != identity or self._commitment != expected_commitment:
+            if (self._identity != identity or self._commitment != expected_commitment
+                    or self._quarantined):
                 raise PolicyBlocked("synthetic fixture commitment conflict")
             self._commitment = next_commitment
 
@@ -76,7 +89,7 @@ class FakeMonotonicWitness:
                 self.fail_next_advance = False
                 raise PolicyBlocked("synthetic witness advance failed")
             if (self._identity != identity or self._epoch != expected_epoch
-                    or self._commitment is None):
+                    or self._commitment is None or self._quarantined):
                 raise PolicyBlocked("synthetic witness mismatch")
             self._epoch += 1
             self._commitment = next_commitment
@@ -241,7 +254,7 @@ class SyntheticHealthLedger:
 
     def _ready(self, db):
         identity, epoch, phase = self._meta(db)
-        if (phase != "READY"
+        if (phase != "READY" or self.witness.is_quarantined()
                 or db.execute("SELECT count(*) FROM pending").fetchone()[0] != 0
                 or self.witness.commitment_snapshot()
                     != (identity, epoch, self._state_commitment(db))):
@@ -349,6 +362,7 @@ class SyntheticHealthLedger:
                 if seq <= old_seq or when < old_when:
                     raise PolicyBlocked("sequence replay or observation-clock regression")
                 if seq != old_seq + 1:
+                    self.witness.mark_quarantined(identity=identity)
                     db.execute("UPDATE meta SET phase='QUARANTINED' WHERE id=1")
                     db.execute("COMMIT")
                     return _receipt("QUARANTINED_SEQUENCE_GAP", quarantined=1)
@@ -424,17 +438,21 @@ class SyntheticHealthLedger:
                     anchor_id, anchor_epoch, anchor_digest = (
                         self.witness.commitment_snapshot())
                     pending = db.execute("SELECT count(*) FROM pending").fetchone()[0]
-                    if (phase == "READY" and pending == 0 and
+                    if (phase == "READY" and pending == 0
+                            and not self.witness.is_quarantined() and
                             (identity, epoch, self._state_commitment(db))
                             == (anchor_id, anchor_epoch, anchor_digest)):
                         db.execute("COMMIT")
                         return _receipt("SYNTHETIC_LEDGER_READY_NOT_AUTHENTICATED")
-                    if (phase == "PENDING" and pending == 1 and identity == anchor_id
+                    if (phase == "PENDING" and pending == 1
+                            and not self.witness.is_quarantined()
+                            and identity == anchor_id
                             and anchor_epoch == epoch + 1):
                         db.execute("COMMIT")
                         self._finalize_pending()
                         return _receipt("SYNTHETIC_INTERRUPTED_COMMIT_RECOVERED",
                                         interrupted=1)
+                    self.witness.mark_quarantined(identity=identity)
                     db.execute("UPDATE meta SET phase='QUARANTINED' WHERE id=1")
                     db.execute("COMMIT")
                     return _receipt("QUARANTINED_UNCERTAIN_SYNTHETIC_RECOVERY",
