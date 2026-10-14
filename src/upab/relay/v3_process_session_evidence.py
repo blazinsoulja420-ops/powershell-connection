@@ -13,7 +13,9 @@ Windows Hello authentication, or task-execution permission.
 """
 from __future__ import annotations
 
+import argparse
 import ctypes
+import json
 from ctypes import wintypes
 import sys
 
@@ -181,3 +183,24 @@ def observe_process_sessions() -> dict[str, object]:
         "processes_stopped": False,
         "settings_changed": False,
     }
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Explicit one-shot read-only Windows session summary."""
+    parser = argparse.ArgumentParser(
+        description="READ-ONLY Windows candidate-process/session evidence"
+    )
+    parser.parse_args(argv)
+    try:
+        report = observe_process_sessions()
+    except (OSError, PolicyBlocked) as exc:
+        # Do not print OS errors: they may contain private local paths.
+        print("WATCHER_V3_SESSION_PREFLIGHT_BLOCKED: " +
+              type(exc).__name__, file=sys.stderr)
+        return 7
+    print(json.dumps(report, sort_keys=True, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
