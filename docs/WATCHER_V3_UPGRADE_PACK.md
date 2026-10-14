@@ -490,6 +490,41 @@ independently attested old-process termination and disabled old launch
 paths, a protected backup, separately authorized migration, nonce
 rotation, rollback drills and Windows laptop acceptance.
 
+## Stage 18 — isolated v1-to-v2 migration / rollback rehearsal (TEST ONLY)
+
+- `src/upab/relay/v3_migration_rehearsal.py` uses only a brand-new, EMPTY,
+  direct OS-temporary `upab-v3-lab-*` fixture root. It rejects an existing
+  project checkout, real state directory, symlink, or nonempty lab folder.
+- Creates two fixed, fictional v1 task-consumption records in `source/`.
+  Takes a byte-for-byte hash-checked copy in `backup/`, creates a
+  *separate* `candidate/` copy and uses the existing candidate v2 ledger
+  to import consumed task IDs, rotate the candidate nonce, and confirm
+  already-consumed tasks are refused. Any `v2_active.marker` is created
+  **only in the disposable candidate directory**.
+- Demonstrates that a marked copied candidate blocks legacy v1 startup,
+  then restores the untouched source snapshot into a *fourth* disposable
+  `restored/` directory and checks byte-for-byte integrity and v1 replay
+  history. Never overwrites the original fixture in place.
+- Explicit fault-injection checkpoints stop after backup, v2 import, or
+  candidate marker. They do not resume, replay, or automatically repair
+  unknown work; partial fixture state remains local to the disposable
+  test folder, and a second run rejects the nonempty root.
+- `tests/test_v3_migration_rehearsal.py` covers success, each interruption,
+  unchanged source/backup integrity, replay rejection and no real-state
+  access. The rehearsal calls no GitHub connector, task executor, service
+  launcher, production marker writer or owner approval issuer.
+- These tests demonstrate **protocol feasibility only**, NOT a correct
+  live cutover. No real v1 process was stopped; no backed-up user data,
+  production migration, approved rollback or Windows laptop acceptance
+  was performed. An old noncooperating v1 process may continue executing
+  despite the separate v2 lock or a newly written marker.
+
+Mandatory deployment gates remain unchanged: separately authenticated owner
+authorization, operating-system verification that v1 and all old launcher
+paths are quiescent, protected/verified backups, a bounded transactional
+cutover with nonce rotation, independent rollback drills, real device
+security review and explicit owner approval before enabling any task.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
