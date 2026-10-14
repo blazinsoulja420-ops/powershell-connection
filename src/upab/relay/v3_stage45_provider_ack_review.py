@@ -20,6 +20,7 @@ CLAIM_SCHEMA = "upab.watcher-v3.synthetic-provider-ack-claim.v1"
 ENVELOPE_SCHEMA = "upab.watcher-v3.synthetic-provider-ack-envelope.v1"
 RECEIPT_SCHEMA = "upab.watcher-v3.synthetic-provider-ack-review.v1"
 DOMAIN = b"UPAB-WATCHER-V3-PROVIDER-ACK-REVIEW-ONLY-v1\x00"
+HEX32 = re.compile(r"[0-9a-f]{32}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 HEX128 = re.compile(r"[0-9a-f]{128}\Z")
 CLAIM_FIELDS = frozenset({
@@ -61,16 +62,10 @@ def canonical_provider_claim(claim: object) -> bytes:
     if (claim["schema"] != CLAIM_SCHEMA
             or type(claim["provider_kind"]) is not str
             or claim["provider_kind"] not in PROVIDERS
-            or not _hex(claim["witness_id"], HEX64) and not (
-                type(claim["witness_id"]) is str and
-                re.fullmatch(r"[0-9a-f]{32}", claim["witness_id"]) is not None
-            )
+            or not _hex(claim["witness_id"], HEX32)
             or type(claim["operation"]) is not str
             or claim["operation"] not in ("READ_SNAPSHOT", "COMPARE_ADVANCE")
-            or not _hex(claim["request_id"], HEX64) and not (
-                type(claim["request_id"]) is str and
-                re.fullmatch(r"[0-9a-f]{32}", claim["request_id"]) is not None
-            )
+            or not _hex(claim["request_id"], HEX32)
             or not _hex(claim["request_sha256"], HEX64)
             or not _hex(claim["claimed_commitment"], HEX64)
             or not _epoch(claim["claimed_epoch"])
@@ -95,10 +90,7 @@ def _receipt(status: str) -> dict[str, object]:
         "schema": RECEIPT_SCHEMA,
         "status": status,
         "evidence_trust": "CALLER_SELECTED_PROVIDER_PIN_AND_REPLAY_HISTORY",
-        "signature_consistency_demonstrated": status not in (
-            "BLOCKED_SYNTHETIC_ACK_EXPIRED_OR_FUTURE",
-            "QUARANTINED_SYNTHETIC_ACK_REPLAY",
-        ),
+        "signature_consistency_demonstrated": True,
         "provider_independently_authenticated": False,
         "pin_independently_enrolled": False,
         "genuine_tpm_or_external_service_verified": False,
