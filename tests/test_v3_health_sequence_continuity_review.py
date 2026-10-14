@@ -96,7 +96,10 @@ class Stage37InertNoSourceTests(unittest.TestCase):
         for value in invalid:
             with self.subTest(value=str(value)[:75]):
                 with self.assertRaises(PolicyBlocked):
-                    review([],previous=value)
+                    review_sequence_continuity(
+                        portfolio=portfolio(),envelopes=[],
+                        previous_snapshot=value,now_epoch_s=NOW,
+                    )
 
     def test_no_persistent_ledger_or_executor_surface(self):
         import upab.relay.v3_health_sequence_continuity_review as module
