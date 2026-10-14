@@ -1079,6 +1079,13 @@ Windows Hello enrollment and a task-scoped broker, and prove old
 watcher shutdown plus backup/rollback on the real laptop. Stage 30
 has NONE of those authorities and does not install/merge/activate.
 
+### Stage 30 supplemental publisher-key enrollment preflight (DENY ONLY)
+
+- `src/upab/relay/v3_publisher_trust_preflight.py` is deliberately **not** another Ed25519 verifier. It checks the syntax of a reviewed commit ID and optional publisher-key fingerprint and returns only `TRUST_ROOT_NOT_ENROLLED`, with all owner-trust, installation, migration and task-execution privileges set to false.
+- Caller-supplied `signed_release_verified=True` or `owner_authenticated=True` are **untrusted statements**, not signed evidence or Windows Hello assertions. Even if supplied, these cannot cause enrollment, approval or execution.
+- `tests/test_v3_publisher_trust_preflight.py` adds six negative tests, including an exact lowercase hexadecimal commit and fingerprint acceptance check, malformed input rejection, and forged trust claims. A platform-independent regular-expression anchoring issue found in the first test attempt was corrected; subsequent exact-head Windows tests must be verified before declaring this supplemental preflight complete.
+- The existing `v3_signed_release_review.py` performs genuine, domain-separated Ed25519 **signature validation for a caller-supplied public key**, but still cannot enroll a trusted publisher/owner root. The two modules must never be interpreted as a production owner-authentication service or silently treated as permission to run a watcher.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
