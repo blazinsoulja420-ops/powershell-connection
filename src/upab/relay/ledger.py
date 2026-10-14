@@ -9,11 +9,22 @@ from pathlib import Path
 class RelayLedger:
     def __init__(self, state_dir: str | Path):
         self.root = Path(state_dir).expanduser().resolve() / "relay"
+        self._guard_not_migrated()
         self.root.mkdir(parents=True, exist_ok=True)
         self.nonce_path = self.root / "nonce.txt"
         self.seen_path = self.root / "seen_tasks.jsonl"
         if not self.nonce_path.exists():
             self._write_nonce(self._new_nonce())
+
+    def _guard_not_migrated(self) -> None:
+        """Fail closed if a future authorized migration activates v2 state.
+
+        Creating/validating this marker is a separate, NOT IMPLEMENTED
+        migration procedure. An existing v1 instance must check again
+        before consuming tasks, not merely on process startup.
+        """
+        if (self.root / "v2_active.marker").exists():
+            raise RuntimeError("legacy relay v1 disabled by v2 activation marker")
 
     @staticmethod
     def _new_nonce() -> str:
@@ -25,6 +36,7 @@ class RelayLedger:
         tmp.replace(self.nonce_path)
 
     def current_nonce(self) -> str:
+        self._guard_not_migrated()
         value = self.nonce_path.read_text(encoding="utf-8").strip()
         if not value:
             value = self._new_nonce()
@@ -32,6 +44,7 @@ class RelayLedger:
         return value
 
     def seen_task_ids(self) -> set[str]:
+        self._guard_not_migrated()
         if not self.seen_path.exists():
             return set()
         seen: set[str] = set()
@@ -46,6 +59,7 @@ class RelayLedger:
         return seen
 
     def consume(self, task_id: str, digest: str, supplied_nonce: str) -> str:
+        self._guard_not_migrated()
         if task_id in self.seen_task_ids():
             raise ValueError(f"task_id replay detected: {task_id}")
         current = self.current_nonce()

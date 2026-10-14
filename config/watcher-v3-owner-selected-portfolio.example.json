@@ -1,0 +1,161 @@
+{
+  "schema": "upab.watcher-v3.owner-selected-portfolio-preview.v1",
+  "basis": "owner-selected-2026-10-14",
+  "owner": "blazinsoulja420-ops",
+  "project_limit": 64,
+  "monitor_limit": 32,
+  "auto_activation": false,
+  "connections": [],
+  "projects": [
+    {
+      "repository": "UP-UHAIB-001-Poindexter",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": [
+        {
+          "id": "001",
+          "category": "AI Chat / Space",
+          "monitor_enabled": false
+        },
+        {
+          "id": "002",
+          "category": "Browser",
+          "monitor_enabled": false
+        },
+        {
+          "id": "003",
+          "category": "Digital Twin",
+          "monitor_enabled": false
+        },
+        {
+          "id": "004",
+          "category": "Managed Software",
+          "monitor_enabled": false
+        },
+        {
+          "id": "005",
+          "category": "Software Design",
+          "monitor_enabled": false
+        },
+        {
+          "id": "006",
+          "category": "Software & AI Health",
+          "monitor_enabled": false
+        },
+        {
+          "id": "007",
+          "category": "Local Events",
+          "monitor_enabled": false
+        },
+        {
+          "id": "008",
+          "category": "Restaurants",
+          "monitor_enabled": false
+        },
+        {
+          "id": "009",
+          "category": "Local Stores",
+          "monitor_enabled": false
+        },
+        {
+          "id": "010",
+          "category": "Meal Suggestions",
+          "monitor_enabled": false
+        },
+        {
+          "id": "011",
+          "category": "Shopping",
+          "monitor_enabled": false
+        },
+        {
+          "id": "012",
+          "category": "Rewards",
+          "monitor_enabled": false
+        },
+        {
+          "id": "013",
+          "category": "Community Chat",
+          "monitor_enabled": false
+        },
+        {
+          "id": "014",
+          "category": "Fame",
+          "monitor_enabled": false
+        },
+        {
+          "id": "015",
+          "category": "Games",
+          "monitor_enabled": false
+        },
+        {
+          "id": "016",
+          "category": "Developer Workspace",
+          "monitor_enabled": false
+        },
+        {
+          "id": "017",
+          "category": "Support Chat",
+          "monitor_enabled": false
+        },
+        {
+          "id": "018",
+          "category": "Wallet",
+          "monitor_enabled": false
+        },
+        {
+          "id": "019",
+          "category": "Auction / Yard Sale",
+          "monitor_enabled": false
+        }
+      ]
+    },
+    {
+      "repository": "Universal-AI-",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": []
+    },
+    {
+      "repository": "UP-RES-001-Autonomous-Research-System",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": []
+    },
+    {
+      "repository": "UASN-AI-Specialist",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": []
+    },
+    {
+      "repository": "powershell-connection",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": []
+    },
+    {
+      "repository": "P-DT-001-Digital-Twin",
+      "monitor_enabled": false,
+      "scope": "STANDALONE",
+      "modules": []
+    },
+    {
+      "repository": "Universal-AI-Behavior-Requirements-Registry",
+      "monitor_enabled": false,
+      "scope": "REQUIREMENTS_ONLY",
+      "modules": []
+    },
+    {
+      "repository": "NSFW",
+      "monitor_enabled": false,
+      "scope": "INDEPENDENT_RESTRICTED",
+      "modules": []
+    },
+    {
+      "repository": "Kali-Linux-",
+      "monitor_enabled": false,
+      "scope": "DEFENSIVE_OFFLINE_ONLY",
+      "modules": []
+    }
+  ]
+}
