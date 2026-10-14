@@ -775,6 +775,56 @@ interactive owner verification and verified old-runtime quiescence,
 then perform approved migration and rollback acceptance. Generic process
 counts must NEVER be used as permission to promote a release.
 
+## Stage 25 — bounded Windows watcher-launch attribution (READ ONLY)
+
+- `src/upab/relay/v3_launcher_attribution.py` contains a bounded pure
+  classifier for caller-supplied in-memory launch descriptions. It counts
+  known repo launcher signatures (`Start-UPAB-ExactRelay.ps1`,
+  `upab.ps1`, `python -m upab relay-watch`), ambiguous UPAB hints,
+  unreadable entries and other hosts; it NEVER emits raw commands,
+  private paths, credentials or identifiers, and NEVER treats a match
+  or non-match as real watcher identity, owner consent or v1 quiescence.
+- `scripts/Get-UPABWatcherLauncherEvidence.ps1` is an explicit opt-in
+  READ-ONLY Windows PowerShell audit of process command-line metadata
+  (Win32_Process), registered Task Scheduler names/actions and service
+  names/launch paths (Win32_Service). All raw launch descriptions are
+  matched only in memory and not returned. The auditor excludes its own
+  process ID from process classification, limits record counts and string
+  lengths, distinguishes each partial scan from blocked/unavailable
+  evidence, and returns counts only. Its default mode does NOT scan.
+  `-FixtureOnly` uses public synthetic data; `-InspectLocal` requests
+  local read-only OS enumeration. Modes cannot be combined.
+- `tests/test_v3_launcher_attribution.py` tests known/ambiguous
+  signatures, malformed or oversized descriptors, empty candidate
+  lists never proving shutdown, PowerShell synthetic/test-default modes,
+  conflicting mode rejection and absence of system-changing operations.
+- Optional reviewed Windows PowerShell call from the candidate checkout:
+
+      .\scripts\Get-UPABWatcherLauncherEvidence.ps1 -InspectLocal
+
+  A local read-only audit was independently performed on the connected
+  Windows laptop during this stage. The initial observation detected
+  zero known launcher signatures, one ambiguous string and no visible
+  scheduler/service matches; it likely counted the inspector's own
+  PowerShell command text. A corrected process-only observation excluding
+  the inspector found 0 known and 0 ambiguous signatures among 9
+  remaining generic candidate host processes, with one inspector excluded.
+  The earlier scheduler/service enumeration observed zero possible
+  matches visible to the current account. No installed-runtime path,
+  PID, command line, task definition, service configuration or private
+  data was included in the report.
+- **Critical boundary:** Neither a zero count nor the presence of an
+  exact signature proves a watcher is stopped, active, authorized, or
+  unable to restart. Alternative interpreters, renamed binaries,
+  in-memory scripts, other users, inaccessible accounts and races
+  remain possible. This stage DOES NOT disable a service, delete a
+  task, lock out v1, enroll credentials, migrate state or execute work.
+
+Full device-level exclusion still requires the owner's supervised
+inventory of all installed launchers, protected shutdown and restart
+prevention, independent security review, rollback backup and authentic
+Windows Hello owner approval before any live activation.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
