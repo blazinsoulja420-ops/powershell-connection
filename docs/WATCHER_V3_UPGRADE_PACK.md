@@ -457,6 +457,39 @@ single-session user interface and a protected credential/nonce broker on
 the owner's laptop. Never start a credential enrollment from a watcher
 poll, repository update, AI output, clipboard event, or startup hook.
 
+## Stage 17 — strict read-only legacy migration risk audit
+
+- `src/upab/relay/v3_migration_risk_audit.py` checks existing v1 nonce,
+  strict canonical v1 JSONL task history and optional v2 SQLite ledger
+  without creating or mutating files, markers, locks or repositories.
+- The auditor enforces fixed byte/record bounds, canonical task IDs and
+  SHA-256 hashes, timezone-aware timestamps and duplicate-task rejection.
+  It compares historical task IDs against v2 consumed records using
+  an explicit read-only SQLite connection and reports any missing imports.
+- A v2 activation marker is not proof that a legacy process has stopped.
+  The auditor always reports `migration_allowed=false`,
+  `v1_quiescence_proven=false` and `task_execution_allowed=false`,
+  even if both ledgers appear internally consistent.
+- Focused tests demonstrate no file changes, replay-history mismatch
+  detection, damaged SQLite rejection, oversize/corrupt JSONL rejection,
+  symlink/reparse guard and marker-without-database refusal.
+- In a Windows PowerShell checkout of this *candidate branch*, a user may
+  explicitly select their **existing** state root for a READ-ONLY audit:
+
+      $env:PYTHONPATH = '.\src'
+      python -m upab.relay.v3_migration_risk_audit --state 'C:\PATH\TO\EXISTING\STATE'
+
+  Do not replace the placeholder with a project repository directory.
+  No automatic state discovery, process termination, migration or
+  activation is performed.
+
+**Blocking issue:** legacy v1 does not respect the v2 single-flight lock.
+Even if the v2_active.marker appears, an old v1 process may already be
+inside a task consumption or execution path. True cutover requires
+independently attested old-process termination and disabled old launch
+paths, a protected backup, separately authorized migration, nonce
+rotation, rollback drills and Windows laptop acceptance.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
