@@ -382,7 +382,7 @@ class SyntheticHealthLedger:
                 new_digest = self._digest(scope, seq, when, epoch + 1)
                 next_commitment = self._state_commitment(
                     db, pending_target=(scope, seq, when, epoch + 1, new_digest))
-                db.execute("INSERT INTO pending VALUES(1,?,?,?,?,?,?)"
+                db.execute("INSERT INTO pending VALUES(1,?,?,?,?,?,?)",
                            (scope, old_digest, new_digest, seq, when, epoch + 1))
                 db.execute("UPDATE meta SET phase='PENDING' WHERE id=1")
                 if interrupt_at == "before_prepare":
