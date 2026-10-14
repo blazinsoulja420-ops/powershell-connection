@@ -525,6 +525,52 @@ paths are quiescent, protected/verified backups, a bounded transactional
 cutover with nonce rotation, independent rollback drills, real device
 security review and explicit owner approval before enabling any task.
 
+## Stage 19 — Windows cutover preflight and backup consistency (READ ONLY)
+
+- `src/upab/relay/v3_windows_cutover_preflight.py` enumerates Windows
+  process executable names using the Win32 Toolhelp32 APIs. It counts
+  potential Python/PowerShell/UPAB hosts without emitting PIDs, process
+  command lines, environment variables, process tokens or private paths.
+  The absence of a recognizable host does NOT prove v1 has exited, because
+  other launchers, renamed executables, suspended processes or work in
+  flight can exist. Every result says `old_watcher_not_running_proven=false`,
+  `old_launcher_paths_disabled_verified=false` and
+  `migration_authorized=false`.
+- An optional explicit `--compare-backup` mode compares the two bounded
+  historical v1 state files (`relay/nonce.txt`, `relay/seen_tasks.jsonl`)
+  under independent, existing source and backup directories. It validates
+  regular-file type, basic symlink/reparse indicators, non-nested roots,
+  size bounds and matching SHA-256 hashes without emitting nonce or task
+  contents. This is a sampling-time consistency check only, NOT a
+  complete backup inventory, Windows ACL verification, tamper-proof
+  snapshot, owner authorization, or proof the source is idle. Hash
+  checking by pathname is not race-free handle-based integrity assurance.
+- `src/upab/relay/v3_windows_startup_surfaces.py` observes bounded classic
+  HKCU/HKLM Run/RunOnce registry entries and standard current/all-user
+  Startup folder filenames. It returns counts of possible UPAB/ExactRelay
+  references but never exports registry commands, linked targets or file
+  contents, and never modifies a startup entry. This is NOT exhaustive:
+  Task Scheduler, Windows services, other accounts, WMI events, logon
+  scripts, arbitrary scheduled commands and already-running processes
+  remain unchecked. It ALWAYS returns
+  `all_legacy_launch_paths_disabled_proven=false`.
+- Windows CI tests exercise native process scanning, redirection guards,
+  known-host classification, exact backup matching and mismatch detection,
+  unrelated project path refusal, missing/oversized files and negative
+  no-authorization behavior. All tests use disposable state fixtures.
+
+Read-only commands from a separately authorized Windows checkout:
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_windows_cutover_preflight --processes
+    python -m upab.relay.v3_windows_cutover_preflight --compare-backup --source-state 'C:\EXISTING\STATE' --backup-state 'C:\EXISTING\BACKUP'
+
+**No live cutover authority**: these tools do not prove v1 quiescence,
+launcher deactivation, backup protection, restoration success, or personal
+owner authorization. Real migration still requires process and launcher
+shutdown proofs, trusted Windows approval, protected backups, independent
+rollback testing and explicit owner permission on the actual laptop.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
