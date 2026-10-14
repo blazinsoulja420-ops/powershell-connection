@@ -194,6 +194,7 @@ class SyntheticHealthLedger:
         _check(self.root, directory=True)
         for suffix in ("", "-wal", "-shm", "-journal"):
             _check(Path(str(self.path) + suffix))
+        db = None
         try:
             db = sqlite3.connect(self.path, timeout=1, isolation_level=None)
             mode = db.execute("PRAGMA journal_mode=WAL").fetchone()[0]
@@ -204,9 +205,17 @@ class SyntheticHealthLedger:
                 raise PolicyBlocked("storage durability downgraded")
             if db.execute("PRAGMA integrity_check(1)").fetchone()[0] != "ok":
                 raise PolicyBlocked("synthetic ledger corrupt")
+            if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise PolicyBlocked("synthetic ledger foreign key violation")
             return db
         except (sqlite3.Error, OSError) as exc:
+            if db is not None:
+                db.close()
             raise PolicyBlocked("synthetic storage unavailable") from exc
+        except BaseException:
+            if db is not None:
+                db.close()
+            raise
 
     @staticmethod
     def _meta(db):
@@ -224,6 +233,9 @@ class SyntheticHealthLedger:
         sequences = db.execute(
             "SELECT scope,last_sequence,last_when,commit_epoch,digest "
             "FROM sequences ORDER BY scope").fetchall()
+        schema = db.execute(
+            "SELECT type,name,tbl_name,sql FROM sqlite_master "
+            "ORDER BY type,name,tbl_name").fetchall()
         if len(collectors) > MAX_OBSERVATIONS or len(sequences) > MAX_OBSERVATIONS:
             raise PolicyBlocked("synthetic ledger exceeds fixed scope capacity")
         if pending_target is not None:
@@ -242,7 +254,8 @@ class SyntheticHealthLedger:
             epoch = next_epoch
         data = {"domain": "UPAB-WATCHER-V3-STATE-COMMITMENT-REVIEW-ONLY-v1",
                 "ledger_id": identity, "epoch": epoch,
-                "collectors": collectors, "sequences": sequences}
+                "collectors": collectors, "sequences": sequences,
+                "sqlite_schema": schema}
         try:
             payload = json.dumps(data, sort_keys=True, separators=(",", ":"),
                                  ensure_ascii=True, allow_nan=False).encode("ascii")
