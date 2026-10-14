@@ -105,7 +105,7 @@ class Stage44SyntheticWitnessTests(unittest.TestCase):
 
     def test_compare_state_mismatch_denied(self):
         for changes in (
-            {"expected_epoch": 10},
+            {"expected_epoch": 10, "next_epoch": 11},
             {"expected_epoch": 12, "next_epoch": 13},
             {"expected_commitment": "f" * 64},
         ):
