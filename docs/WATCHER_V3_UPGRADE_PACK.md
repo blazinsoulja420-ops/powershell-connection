@@ -690,6 +690,48 @@ NOT that deployment was approved. Device-specific enrollment, protected
 approval brokerage, old watcher exclusion, backup recovery and explicit
 owner authorization remain unresolved. No feature is activated.
 
+## Stage 23 — externally pinned backup consistency and supervised acceptance (DISARMED)
+
+- `src/upab/relay/v3_backup_manifest_evidence.py` strictly parses a compact
+  declared manifest for an **existing**, explicitly chosen, narrow
+  `relay/` backup tree. Only expected v1/v2 state file names are accepted.
+  For each declared file, it rehashes bytes under fixed size limits,
+  rejects added/missing files, mismatched sizes, bad hashes, renamed
+  unexpected data, symlinks and obvious reparse paths.
+- The caller must separately supply the lowercase SHA-256 of the canonical
+  manifest bytes. The pin is a **comparison input**, not a verified
+  signature, protected custody, a known good trusted baseline, owner
+  approval, or complete source-of-origin evidence. Both manifest and
+  pin can be provided by an untrusted caller. A matching pair is NEVER
+  considered authentic, immutable, restorable or approved.
+- Checks are read-only by filename with basic before/after size/time
+  observations; they are **not** atomic NTFS handle-based snapshots, and
+  cannot protect against live concurrent changes. The output exposes
+  aggregate counts only, never the nonce, task contents, raw file hashes,
+  chosen path or user identity. On a mismatch, the preview refuses
+  success rather than modifying backups or repairing history.
+- `src/upab/relay/v3_supervised_acceptance.py` supplies 14 fixed device
+  acceptance checkpoints: exact baseline; v1 quiescence and launcher
+  exclusion; protected backup, isolated restore and rollback; verified
+  relying party and user-interactive Windows Hello; secure task broker;
+  executor isolation; single-flight and fault recovery; performance;
+  independent security review and explicit owner deployment approval.
+- Checkpoint outcomes are **untrusted self-reports**. Values may be
+  `NOT_TESTED`, `FAILED` or `REPORTED_PASS_UNVERIFIED`. Even if all
+  checkpoints claim PASS, `real_device_acceptance_passed=false`,
+  `safe_to_install=false` and `live_task_execution_authorized=false`.
+  No component starts a service, touches Windows Hello or executes tasks.
+- New negative CI tests exercise swapped/altered/missing backups, external
+  fingerprint mismatch, forged approval fields, symlink and extra-file
+  refusal, and claimed-all-PASS not being treated as permission.
+
+These are **audit tools**, not proof of authenticated owner consent.
+Before a real cutover, genuine owner-interactive Windows acceptance,
+trusted RP/credential enrollment, complete protected backups, v1
+process/launcher shutdown, approved rollback and independently verified
+execution isolation remain mandatory and cannot be replaced with a
+CI-generated SHA-256 value or a checked checklist.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
