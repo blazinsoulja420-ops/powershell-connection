@@ -977,6 +977,59 @@ limited-scope executor acceptance must precede any installation,
 migration or task execution. All twelve feature flags stay disabled,
 with exactly 64 registered project slots and 32 active monitors.
 
+## Stage 29 — independently reviewed commit-pinned source comparison (READ ONLY)
+
+- `src/upab/relay/v3_pinned_source_manifest.py` accepts only an existing
+  explicitly selected checkout, an existing explicitly selected
+  small JSON review manifest, a separately supplied lowercase SHA-256
+  digest of the canonical manifest, and a separately specified exact
+  40-character lowercase Git commit ID. No automatic folder discovery
+  and no network/source-repository action occurs.
+- A manifest must claim exactly
+  `blazinsoulja420-ops/powershell-connection`, carry the expected
+  schema and fixed allowed commit text, and list precisely the six
+  Stage 26 public source/config artifacts with bounded byte lengths
+  and SHA-256 hashes. Any wrong commit text, missing/unexpected file,
+  altered byte, reparse path, disabled-feature violation, malformed
+  metadata, extra approval field or manifest pin mismatch is BLOCKED.
+- The code calls the existing Stage 26 disabled feature/catalog check
+  before comparing bytes: 64 registered projects, 32 active monitored
+  folders, 12 known disabled upgrades. All authority and mutation
+  fields stay false, including `safe_to_promote`, `safe_to_install`,
+  `safe_to_migrate` and `task_execution_authorized`.
+- An externally supplied SHA-256 digest is NOT a cryptographic signature
+  of the owner or GitHub. BOTH the manifest and digest might be supplied
+  by the same attacker, and the commit string is NOT verified against
+  GitHub objects or signed releases. Even a complete match establishes
+  **FILE CONSISTENCY WITH AN UNAUTHENTICATED MANIFEST ONLY**.
+- `tests/test_v3_pinned_source_manifest.py` uses synthetic public
+  files and tests matching/non-authorizing receipts, changed bytes,
+  forged commit and approval fields, extra private file paths,
+  missing/unexpected paths, mismatched SHA-256, feature activation,
+  redirection and fail-closed CLI input handling.
+
+Example on Windows PowerShell from a reviewed candidate checkout;
+no execution beyond bounded source reads is performed:
+
+    $env:PYTHONPATH = '.\src'
+    python -m upab.relay.v3_pinned_source_manifest --checkout 'C:\EXISTING\REVIEWED\CHECKOUT' --manifest 'C:\EXISTING\REVIEWED\SOURCE-MANIFEST.json' --manifest-sha256 '<REVIEWED_64_HEX_DIGEST>' --expected-commit '<REVIEWED_40_HEX_COMMIT>'
+
+Do NOT fill these arguments by blindly copying hashes from an
+untrusted local folder, and do NOT interpret exit code 0 as an
+authorization. A trusted release publisher key/policy, independently
+verified signed commit/release, owner Windows Hello enrollment, protected
+backup/rollback and real OS launch-exclusion evidence are still
+required before even considering a controlled production cutover.
+
+**Laptop evidence during Stage 29:** the separately paused scheduled
+task `UASN-Local-AI-Watchdog` was read-only verified still Disabled.
+The account's current PowerShell PATH exposed zero commands named
+`upab` and two Python command registrations. This narrows only the
+inspector's session; a portable or renamed watcher can exist elsewhere.
+No exact installed watcher location or authentic version has yet
+been located. No process, file, scheduler or feature setting was
+modified on the laptop.
+
 ## Approval and migration
 
 The future execution controller must enforce ALL of:
